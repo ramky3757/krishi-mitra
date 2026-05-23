@@ -3,35 +3,47 @@ import { View, Text, TextInput, Pressable, KeyboardAvoidingView, Platform, Activ
 import { router, useLocalSearchParams } from 'expo-router';
 import { useAuthStore } from '@/stores/authStore';
 
+const OTP_LENGTH = 8;
+
 export default function OTPScreen() {
   const { email } = useLocalSearchParams<{ email: string }>();
-  const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(''));
   const [error, setError] = useState('');
   const [resendTimer, setResendTimer] = useState(0);
   const { verifyEmailOTP, signInWithEmail, isLoading } = useAuthStore();
   const inputRefs = useRef<(TextInput | null)[]>([]);
 
   const handleDigit = (value: string, index: number) => {
+    // Support paste of full code
+    if (value.length > 1) {
+      const digits = value.replace(/\D/g, '').slice(0, OTP_LENGTH).split('');
+      const newOtp = Array(OTP_LENGTH).fill('');
+      digits.forEach((d, i) => { newOtp[i] = d; });
+      setOtp(newOtp);
+      setError('');
+      const next = Math.min(digits.length, OTP_LENGTH - 1);
+      inputRefs.current[next]?.focus();
+      return;
+    }
     const digit = value.replace(/\D/g, '').slice(-1);
     const newOtp = [...otp];
     newOtp[index] = digit;
     setOtp(newOtp);
     setError('');
-    if (digit && index < 5) inputRefs.current[index + 1]?.focus();
+    if (digit && index < OTP_LENGTH - 1) inputRefs.current[index + 1]?.focus();
     if (!digit && index > 0) inputRefs.current[index - 1]?.focus();
   };
 
   const handleVerify = async () => {
     const code = otp.join('');
-    if (code.length < 6) return;
+    if (code.length < OTP_LENGTH) return;
     setError('');
     try {
       await verifyEmailOTP(email, code);
-      // Route to root so index.tsx can pick the right home based on role.
       router.replace('/');
     } catch (e: any) {
       setError(e.message ?? 'Invalid code. Please try again.');
-      setOtp(['', '', '', '', '', '']);
+      setOtp(Array(OTP_LENGTH).fill(''));
       inputRefs.current[0]?.focus();
     }
   };
@@ -63,12 +75,11 @@ export default function OTPScreen() {
 
         <Text className="text-3xl font-bold text-gray-900 mb-2">Check your email</Text>
         <Text className="text-gray-500 text-base mb-2">
-          Enter the 6-digit code sent to
+          Enter the {OTP_LENGTH}-digit code sent to
         </Text>
         <Text className="text-gray-900 font-semibold text-base mb-10">{email}</Text>
 
-        {/* OTP boxes */}
-        <View className="flex-row gap-3 mb-4">
+        <View className="flex-row gap-2 mb-4">
           {otp.map((digit, i) => (
             <TextInput
               key={i}
@@ -76,7 +87,7 @@ export default function OTPScreen() {
               className={`flex-1 aspect-square border-2 rounded-2xl text-center text-2xl font-bold
                 ${error ? 'border-red-400 bg-red-50' : digit ? 'border-brand-600 bg-brand-50' : 'border-gray-200'}`}
               keyboardType="numeric"
-              maxLength={1}
+              maxLength={i === 0 ? OTP_LENGTH : 1}
               value={digit}
               onChangeText={(v) => handleDigit(v, i)}
               autoFocus={i === 0}
