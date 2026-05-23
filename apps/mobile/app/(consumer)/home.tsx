@@ -85,7 +85,7 @@ export default function HomeScreen() {
 
       {/* Trust banner */}
       <View className="mx-5 mb-8 bg-brand-50 border border-brand-200 rounded-3xl p-5">
-        <Text className="text-brand-700 font-bold text-base mb-3">Why HarvestBond?</Text>
+        <Text className="text-brand-700 font-bold text-base mb-3">Why Krishi Mitra?</Text>
         <View className="gap-2">
           <TrustPoint icon="✅" text="Only verified farmers with confirmed land records" />
           <TrustPoint icon="📸" text="Real-time crop progress photos from the farm" />

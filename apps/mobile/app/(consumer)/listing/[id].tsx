@@ -188,6 +188,7 @@ function DetailsTab({ listing, method }: any) {
 
 function FarmerTab({ farmer }: any) {
   if (!farmer) return <Text className="text-gray-500">Farmer info not available</Text>;
+  const profile = farmer.farmer_profile;
   return (
     <View className="gap-4">
       {/* Profile */}
@@ -196,24 +197,24 @@ function FarmerTab({ farmer }: any) {
           <Text className="text-3xl">🧑‍🌾</Text>
         </View>
         <View className="flex-1">
-          <Text className="font-bold text-gray-900 text-lg">{farmer.user?.full_name}</Text>
-          <Text className="text-gray-500 text-sm">📍 {farmer.district}, {farmer.state}</Text>
-          {farmer.avg_rating > 0 && (
+          <Text className="font-bold text-gray-900 text-lg">{farmer.full_name}</Text>
+          <Text className="text-gray-500 text-sm">📍 {profile?.district}, {profile?.state}</Text>
+          {profile?.avg_rating > 0 && (
             <View className="flex-row items-center gap-1 mt-1">
               <Text className="text-yellow-500">⭐</Text>
-              <Text className="text-gray-700 font-semibold">{farmer.avg_rating.toFixed(1)}</Text>
-              <Text className="text-gray-400 text-sm">({farmer.completed_orders} orders)</Text>
+              <Text className="text-gray-700 font-semibold">{profile.avg_rating.toFixed(1)}</Text>
+              <Text className="text-gray-400 text-sm">({profile.completed_orders} orders)</Text>
             </View>
           )}
         </View>
       </View>
 
       {/* Badges */}
-      {farmer.verification_badges?.length > 0 && (
+      {profile?.verification_badges?.length > 0 && (
         <View>
           <Text className="font-semibold text-gray-800 mb-2">Verification</Text>
           <View className="flex-row flex-wrap gap-2">
-            {farmer.verification_badges.map((badge: string) => {
+            {profile.verification_badges.map((badge: string) => {
               const b = VERIFICATION_BADGES.find((vb) => vb.key === badge);
               return b ? (
                 <View key={badge} className="flex-row items-center gap-1.5 bg-green-50 border border-green-200 rounded-full px-3 py-1">
@@ -226,10 +227,10 @@ function FarmerTab({ farmer }: any) {
         </View>
       )}
 
-      {farmer.bio && (
+      {profile?.bio && (
         <View>
           <Text className="font-semibold text-gray-800 mb-1.5">About the Farmer</Text>
-          <Text className="text-gray-600 leading-6">{farmer.bio}</Text>
+          <Text className="text-gray-600 leading-6">{profile.bio}</Text>
         </View>
       )}
     </View>

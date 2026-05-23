@@ -65,9 +65,9 @@ export function CropListingCard({ listing, onPress, compact = false }: Props) {
             <Text className="text-xs">🧑‍🌾</Text>
           </View>
           <Text className="text-gray-700 text-sm font-medium">
-            {listing.farmer?.user?.full_name ?? 'Verified Farmer'}
+            {listing.farmer?.full_name ?? 'Verified Farmer'}
           </Text>
-          {listing.farmer?.verification_badges?.includes('id_verified') && (
+          {listing.farmer?.farmer_profile?.verification_badges?.includes('id_verified') && (
             <View className="bg-brand-100 rounded-full px-2 py-0.5">
               <Text className="text-brand-700 text-xs font-semibold">✓ Verified</Text>
             </View>

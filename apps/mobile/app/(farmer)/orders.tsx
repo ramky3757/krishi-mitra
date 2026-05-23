@@ -54,7 +54,7 @@ export default function FarmerOrdersScreen() {
 
 function OrderCard({ booking, onPress, onAction }: { booking: Booking; onPress: () => void; onAction: (next: BookingStatus) => void }) {
   const action = FARMER_STATUS_ACTIONS[booking.status];
-  const consumer = (booking as any).consumer?.user;
+  const consumer = (booking as any).consumer;
 
   return (
     <Pressable onPress={onPress} className="bg-white rounded-3xl p-5 mb-4 active:opacity-90" style={{ elevation: 1 }}>

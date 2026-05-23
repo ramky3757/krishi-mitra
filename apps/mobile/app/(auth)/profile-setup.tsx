@@ -3,7 +3,6 @@ import { View, Text, TextInput, Pressable, ScrollView, ActivityIndicator } from 
 import { router } from 'expo-router';
 import { useAuthStore } from '@/stores/authStore';
 import { supabase } from '@/lib/supabase';
-import { INDIA_STATES } from '@/constants';
 
 export default function ProfileSetupScreen() {
   const { user, updateProfile } = useAuthStore();

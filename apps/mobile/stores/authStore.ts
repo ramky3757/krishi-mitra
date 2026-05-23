@@ -12,8 +12,9 @@ interface AuthState {
   isInitialized: boolean;
 
   initialize: () => Promise<void>;
-  signInWithPhone: (phone: string) => Promise<void>;
-  verifyOTP: (phone: string, token: string) => Promise<void>;
+  signInWithEmail: (email: string) => Promise<void>;
+  verifyEmailOTP: (email: string, token: string) => Promise<void>;
+  signInWithPassword: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   updateProfile: (data: Partial<User>) => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -28,11 +29,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isInitialized: false,
 
   initialize: async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.user) {
-      await get().refreshProfile();
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        await get().refreshProfile();
+      }
+      set({ session, isInitialized: true });
+    } catch (e) {
+      set({ isInitialized: true });
     }
-    set({ session, isInitialized: true });
 
     supabase.auth.onAuthStateChange(async (_event, session) => {
       set({ session });
@@ -44,16 +49,27 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     });
   },
 
-  signInWithPhone: async (phone: string) => {
+  signInWithEmail: async (email: string) => {
     set({ isLoading: true });
-    const { error } = await supabase.auth.signInWithOtp({ phone });
+    const { error } = await supabase.auth.signInWithOtp({ email });
     set({ isLoading: false });
     if (error) throw error;
   },
 
-  verifyOTP: async (phone: string, token: string) => {
+  verifyEmailOTP: async (email: string, token: string) => {
     set({ isLoading: true });
-    const { data, error } = await supabase.auth.verifyOtp({ phone, token, type: 'sms' });
+    const { data, error } = await supabase.auth.verifyOtp({ email, token, type: 'email' });
+    if (error) {
+      set({ isLoading: false });
+      throw error;
+    }
+    set({ session: data.session, isLoading: false });
+    await get().refreshProfile();
+  },
+
+  signInWithPassword: async (email: string, password: string) => {
+    set({ isLoading: true });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       set({ isLoading: false });
       throw error;
@@ -80,11 +96,27 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const { data: { user: authUser } } = await supabase.auth.getUser();
     if (!authUser) return;
 
-    const { data: userData } = await supabase
+    let { data: userData } = await supabase
       .from('users')
       .select('*')
       .eq('id', authUser.id)
       .single();
+
+    // If no public.users row exists (e.g. account created directly in Supabase
+    // dashboard without going through the app's OTP trigger), create it now.
+    if (!userData) {
+      const { data: created } = await supabase
+        .from('users')
+        .upsert({
+          id: authUser.id,
+          email: authUser.email ?? null,
+          phone: authUser.phone ?? null,
+          full_name: authUser.user_metadata?.full_name ?? '',
+        })
+        .select('*')
+        .single();
+      userData = created;
+    }
 
     if (!userData) return;
     set({ user: userData });
@@ -92,7 +124,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (userData.role === 'farmer') {
       const { data: fp } = await supabase
         .from('farmer_profiles')
-        .select('*, user:users(*)')
+        .select('*')
         .eq('user_id', authUser.id)
         .single();
       set({ farmerProfile: fp });

@@ -20,10 +20,10 @@ const STATUS_LABELS: Record<string, { label: string; bg: string; text: string }>
 export default function FarmerListingsScreen() {
   const { user } = useAuthStore();
   const [listings, setListings] = useState<CropListing[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   const loadListings = async () => {
-    if (!user) return;
+    if (!user?.id) return;
     setIsLoading(true);
     const { data } = await supabase
       .from('crop_listings')
@@ -34,7 +34,7 @@ export default function FarmerListingsScreen() {
     setIsLoading(false);
   };
 
-  useEffect(() => { loadListings(); }, []);
+  useEffect(() => { if (user?.id) loadListings(); }, [user?.id]);
 
   return (
     <View className="flex-1 bg-gray-50">

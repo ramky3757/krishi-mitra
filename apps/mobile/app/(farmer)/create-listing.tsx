@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { View, Text, ScrollView, Pressable, TextInput, Switch, Alert, ActivityIndicator, Image } from 'react-native';
+import { View, Text, ScrollView, Pressable, TextInput, Switch, ActivityIndicator, Image } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
+import { Snackbar } from 'react-native-paper';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import { CROP_CATEGORIES, FARMING_METHODS } from '@/constants';
@@ -31,9 +32,10 @@ interface ListingForm {
 const STEPS = ['Crop Info', 'Pricing', 'Farm Details', 'Photos', 'Review'];
 
 export default function CreateListingScreen() {
-  const { user } = useAuthStore();
+  const { user, farmerProfile } = useAuthStore();
   const [step, setStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
   const [form, setForm] = useState<ListingForm>({
     cropCategory: '',
     cropName: '',
@@ -59,7 +61,7 @@ export default function CreateListingScreen() {
     setForm((f) => ({ ...f, [key]: value }));
 
   const pickPhoto = async () => {
-    if (form.photos.length >= 5) { Alert.alert('Max 5 photos'); return; }
+    if (form.photos.length >= 5) { setToast('Maximum 5 photos allowed'); return; }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       quality: 0.7,
@@ -104,6 +106,11 @@ export default function CreateListingScreen() {
         water_source: form.waterSource || null,
         soil_type: form.soilType || null,
         description: form.description || null,
+        state: farmerProfile?.state ?? '',
+        district: farmerProfile?.district ?? '',
+        village: farmerProfile?.village ?? null,
+        geo_lat: farmerProfile?.farm_geo_lat ?? null,
+        geo_lng: farmerProfile?.farm_geo_lng ?? null,
         status: 'pending_approval',
       }).select().single();
 
@@ -116,23 +123,47 @@ export default function CreateListingScreen() {
         );
       }
 
-      Alert.alert(
-        'Listing Submitted! 🎉',
-        'Your crop listing is pending admin approval. You\'ll be notified once it goes live.',
-        [{ text: 'OK', onPress: () => router.replace('/(farmer)/listings') }]
-      );
+      setToast('Listing submitted! Pending admin approval.');
+      setTimeout(() => router.replace('/(farmer)/listings'), 1200);
     } catch (e: any) {
-      Alert.alert('Error', e.message ?? 'Failed to create listing');
+      setToast(e.message ?? 'Failed to create listing');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const isStep0Valid = form.cropCategory && form.cropName && form.sowingDate && form.harvestDate;
-  const isStep1Valid = form.pricePerKgFinal && form.pricePerKgAdvance && form.totalYieldKg && form.availableQtyKg;
-  const isStep2Valid = form.farmSizeAcres && form.farmingMethod;
+  // Build a list of missing required fields for the current step so the user
+  // can see exactly what's blocking the Next button.
+  const isFilled = (v: string) => !!v && v.trim().length > 0;
+  const isDate = (v: string) => /^\d{4}-\d{2}-\d{2}$/.test(v.trim());
+  const isPositiveNumber = (v: string) => {
+    const n = parseFloat(v);
+    return !Number.isNaN(n) && n > 0;
+  };
 
-  const canNext = [isStep0Valid, isStep1Valid, isStep2Valid, true, true][step];
+  const missingByStep: Record<number, string[]> = {
+    0: [
+      !form.cropCategory && 'Category',
+      !isFilled(form.cropName) && 'Crop Name',
+      !isDate(form.sowingDate) && 'Sowing Date (YYYY-MM-DD)',
+      !isDate(form.harvestDate) && 'Harvest Date (YYYY-MM-DD)',
+    ].filter(Boolean) as string[],
+    1: [
+      !isPositiveNumber(form.totalYieldKg) && 'Total Yield (kg)',
+      !isPositiveNumber(form.availableQtyKg) && 'Available Quantity (kg)',
+      !isPositiveNumber(form.pricePerKgFinal) && 'Final Price (₹/kg)',
+      !isPositiveNumber(form.pricePerKgAdvance) && 'Advance Price (₹/kg)',
+    ].filter(Boolean) as string[],
+    2: [
+      !isPositiveNumber(form.farmSizeAcres) && 'Farm Size (acres)',
+      !form.farmingMethod && 'Farming Method',
+    ].filter(Boolean) as string[],
+    3: [],
+    4: [],
+  };
+
+  const missing = missingByStep[step];
+  const canNext = missing.length === 0;
 
   return (
     <View className="flex-1 bg-gray-50">
@@ -161,7 +192,15 @@ export default function CreateListingScreen() {
       </ScrollView>
 
       {/* Footer nav */}
-      <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-5 py-4 pb-8">
+      <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-5 py-3 pb-6">
+        {missing.length > 0 && (
+          <View className="mb-3 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+            <Text className="text-amber-800 text-xs font-semibold mb-0.5">
+              Fill these to continue:
+            </Text>
+            <Text className="text-amber-700 text-xs">{missing.join(' · ')}</Text>
+          </View>
+        )}
         <Pressable
           onPress={() => step < 4 ? setStep(step + 1) : handleSubmit()}
           disabled={!canNext || isLoading}
@@ -176,6 +215,15 @@ export default function CreateListingScreen() {
           )}
         </Pressable>
       </View>
+
+      <Snackbar
+        visible={!!toast}
+        onDismiss={() => setToast(null)}
+        duration={4000}
+        action={{ label: 'OK', onPress: () => setToast(null) }}
+      >
+        {toast ?? ''}
+      </Snackbar>
     </View>
   );
 }

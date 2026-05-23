@@ -39,7 +39,7 @@ export default function CheckoutScreen() {
   const isValid = qtyNum >= 1 && qtyNum <= remainingQty && address.trim();
 
   const handleBook = async () => {
-    if (!isValid) return;
+    if (!isValid || isLoading) return;
     setIsLoading(true);
     try {
       const booking = await createBooking({
@@ -48,11 +48,23 @@ export default function CheckoutScreen() {
         delivery_address: address,
         notes,
       });
-      // In real app, integrate Razorpay here for advance payment
+
+      // Simulate advance payment received (replace with Razorpay when ready)
+      const { supabase } = await import('@/lib/supabase');
+      await supabase.from('payments').insert({
+        booking_id: booking.id,
+        type: 'advance',
+        amount: advanceAmount,
+        status: 'completed',
+        gateway_ref: `MOCK-${Date.now()}`,
+      });
+      await supabase.from('bookings').update({ status: 'confirmed' }).eq('id', booking.id);
+
+      // Navigate immediately — don't wait for user to tap an alert button
+      router.replace('/(consumer)/bookings');
       Alert.alert(
         'Booking Confirmed! 🎉',
-        `Your booking for ${formatWeight(qtyNum)} of ${listing.crop_name} is confirmed.\n\nAdvance payment of ${formatCurrency(advanceAmount)} is due to secure your booking.`,
-        [{ text: 'View Booking', onPress: () => router.replace(`/(consumer)/booking/${booking.id}`) }]
+        `Your booking for ${formatWeight(qtyNum)} of ${listing.crop_name} is confirmed. Advance payment of ${formatCurrency(advanceAmount)} has been received.`
       );
     } catch (e: any) {
       Alert.alert('Error', e.message ?? 'Booking failed. Please try again.');

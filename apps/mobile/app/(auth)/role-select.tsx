@@ -1,22 +1,28 @@
-import { View, Text, Pressable, ScrollView } from 'react-native';
+import { useState } from 'react';
+import { View, Text, Pressable, ScrollView, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
-import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import { UserRole } from '@/types';
 
 export default function RoleSelectScreen() {
-  const { updateProfile } = useAuthStore();
+  const { updateProfile, user } = useAuthStore();
+  const [loading, setLoading] = useState<UserRole | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const selectRole = async (role: UserRole) => {
+    setLoading(role);
+    setError(null);
     try {
       await updateProfile({ role });
       if (role === 'farmer') {
-        router.replace('/(auth)/farmer-kyc');
+        router.replace('/(farmer)/dashboard');
       } else {
-        router.replace('/(auth)/profile-setup');
+        router.replace('/(consumer)/home');
       }
-    } catch (e) {
-      console.error(e);
+    } catch (e: any) {
+      setError(e?.message ?? 'Something went wrong. Please try again.');
+    } finally {
+      setLoading(null);
     }
   };
 
@@ -25,12 +31,19 @@ export default function RoleSelectScreen() {
       <View className="flex-1 px-6 pt-16 pb-8">
         <Text className="text-3xl font-bold text-gray-900 mb-2">Who are you?</Text>
         <Text className="text-gray-500 text-base mb-10">
-          Help us personalize your HarvestBond experience.
+          Help us personalize your Krishi Mitra experience.
         </Text>
+
+        {error && (
+          <View className="mb-6 bg-red-50 border border-red-200 rounded-2xl px-4 py-3">
+            <Text className="text-red-700 text-sm">{error}</Text>
+          </View>
+        )}
 
         <RoleCard
           emoji="🧑‍🌾"
           title="I'm a Farmer"
+          buttonLabel="Continue as Farmer"
           subtitle="I grow crops and want to sell my yield directly to consumers"
           features={[
             'Post crop listings with full details',
@@ -39,6 +52,8 @@ export default function RoleSelectScreen() {
             'Share farm progress and updates',
           ]}
           onPress={() => selectRole('farmer')}
+          isLoading={loading === 'farmer'}
+          disabled={loading !== null}
           accent="brand"
         />
 
@@ -47,6 +62,7 @@ export default function RoleSelectScreen() {
         <RoleCard
           emoji="👨‍👩‍👧‍👦"
           title="I'm a Consumer"
+          buttonLabel="Continue as Consumer"
           subtitle="I want to pre-buy fresh crops directly from verified farmers"
           features={[
             'Browse verified farm listings near you',
@@ -55,6 +71,8 @@ export default function RoleSelectScreen() {
             'Know exactly how your food is grown',
           ]}
           onPress={() => selectRole('consumer')}
+          isLoading={loading === 'consumer'}
+          disabled={loading !== null}
           accent="harvest"
         />
       </View>
@@ -63,29 +81,28 @@ export default function RoleSelectScreen() {
 }
 
 function RoleCard({
-  emoji,
-  title,
-  subtitle,
-  features,
-  onPress,
-  accent,
+  emoji, title, buttonLabel, subtitle, features, onPress, isLoading, disabled, accent,
 }: {
   emoji: string;
   title: string;
+  buttonLabel: string;
   subtitle: string;
   features: string[];
   onPress: () => void;
+  isLoading: boolean;
+  disabled: boolean;
   accent: 'brand' | 'harvest';
 }) {
-  const borderColor = accent === 'brand' ? 'border-brand-600' : 'border-harvest-300';
-  const bgColor = accent === 'brand' ? 'bg-brand-50' : 'bg-harvest-100';
-  const dotColor = accent === 'brand' ? 'bg-brand-600' : 'bg-harvest-300';
-  const btnColor = accent === 'brand' ? 'bg-brand-700' : 'bg-soil-300';
+  const borderColor = accent === 'brand' ? 'border-brand-600' : 'border-amber-400';
+  const bgColor = accent === 'brand' ? 'bg-brand-50' : 'bg-amber-50';
+  const dotColor = accent === 'brand' ? 'bg-brand-600' : 'bg-amber-400';
+  const btnColor = accent === 'brand' ? 'bg-brand-700' : 'bg-amber-600';
 
   return (
     <Pressable
       onPress={onPress}
-      className={`border-2 ${borderColor} ${bgColor} rounded-3xl p-6 active:opacity-80`}
+      disabled={disabled}
+      className={`border-2 ${borderColor} ${bgColor} rounded-3xl p-6 active:opacity-80 ${disabled ? 'opacity-70' : ''}`}
     >
       <Text className="text-5xl mb-3">{emoji}</Text>
       <Text className="text-xl font-bold text-gray-900 mb-1">{title}</Text>
@@ -101,7 +118,11 @@ function RoleCard({
       </View>
 
       <View className={`${btnColor} rounded-xl py-3 items-center`}>
-        <Text className="text-white font-semibold">Continue as {title.split("'")[1]}</Text>
+        {isLoading ? (
+          <ActivityIndicator color="white" size="small" />
+        ) : (
+          <Text className="text-white font-semibold">{buttonLabel}</Text>
+        )}
       </View>
     </Pressable>
   );

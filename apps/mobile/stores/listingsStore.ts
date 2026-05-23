@@ -40,7 +40,7 @@ export const useListingsStore = create<ListingsState>((set, get) => ({
       .from('crop_listings')
       .select(`
         *,
-        farmer:farmer_profiles(*, user:users(*)),
+        farmer:users!farmer_id(*, farmer_profile:farmer_profiles(*)),
         media:listing_media(*)
       `)
       .eq('status', 'active')
@@ -74,7 +74,7 @@ export const useListingsStore = create<ListingsState>((set, get) => ({
   fetchFeaturedListings: async () => {
     const { data } = await supabase
       .from('crop_listings')
-      .select(`*, farmer:farmer_profiles(*, user:users(*)), media:listing_media(*)`)
+      .select(`*, farmer:users!farmer_id(*, farmer_profile:farmer_profiles(*)), media:listing_media(*)`)
       .eq('status', 'active')
       .order('created_at', { ascending: false })
       .limit(6);
@@ -88,7 +88,7 @@ export const useListingsStore = create<ListingsState>((set, get) => ({
       .from('crop_listings')
       .select(`
         *,
-        farmer:farmer_profiles(*, user:users(*)),
+        farmer:users!farmer_id(*, farmer_profile:farmer_profiles(*)),
         media:listing_media(*),
         progress_updates(*)
       `)
@@ -99,20 +99,21 @@ export const useListingsStore = create<ListingsState>((set, get) => ({
     if (error) throw error;
   },
 
+  // Note: setFilters / clearFilters update state only. The screen that observes
+  // filters is responsible for calling fetchListings(true) — this avoids a
+  // double-fetch when the caller is about to navigate.
   setFilters: (filters: FilterOptions) => {
     set({ filters, listings: [], page: 0, hasMore: true });
-    get().fetchListings(true);
   },
 
   clearFilters: () => {
     set({ filters: {}, listings: [], page: 0, hasMore: true });
-    get().fetchListings(true);
   },
 
   refreshListing: async (id: string) => {
     const { data } = await supabase
       .from('crop_listings')
-      .select(`*, farmer:farmer_profiles(*, user:users(*)), media:listing_media(*), progress_updates(*)`)
+      .select(`*, farmer:users!farmer_id(*, farmer_profile:farmer_profiles(*)), media:listing_media(*), progress_updates(*)`)
       .eq('id', id)
       .single();
 

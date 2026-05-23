@@ -1,12 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { approveKYC, rejectKYC } from '@/app/actions';
 
 const BADGE_OPTIONS = [
   { key: 'id_verified', label: 'ID Verified' },
@@ -23,23 +18,27 @@ export function KYCActions({ farmerId }: { farmerId: string }) {
 
   const handleApprove = async () => {
     setIsLoading(true);
-    await supabase.from('farmer_profiles').update({
-      kyc_status: 'approved',
-      verification_badges: selectedBadges,
-    }).eq('user_id', farmerId);
-    setDone(true);
-    setIsLoading(false);
+    try {
+      await approveKYC(farmerId, selectedBadges);
+      setDone(true);
+    } catch (e: any) {
+      alert(e.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleReject = async () => {
     if (!rejectionReason) return;
     setIsLoading(true);
-    await supabase.from('farmer_profiles').update({
-      kyc_status: 'rejected',
-    }).eq('user_id', farmerId);
-    // TODO: send rejection SMS with reason
-    setDone(true);
-    setIsLoading(false);
+    try {
+      await rejectKYC(farmerId, rejectionReason);
+      setDone(true);
+    } catch (e: any) {
+      alert(e.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (done) {
@@ -48,7 +47,6 @@ export function KYCActions({ farmerId }: { farmerId: string }) {
 
   return (
     <div>
-      {/* Badge selection */}
       <div className="mb-4">
         <p className="text-sm font-semibold text-gray-700 mb-2">Grant Badges on Approval:</p>
         <div className="flex gap-2 flex-wrap">
@@ -73,17 +71,10 @@ export function KYCActions({ farmerId }: { farmerId: string }) {
       <div className="flex gap-3">
         {!showReject && (
           <>
-            <button
-              onClick={handleApprove}
-              disabled={isLoading}
-              className="flex-1 bg-brand-700 text-white rounded-xl py-2.5 font-semibold hover:bg-brand-800 transition-colors disabled:opacity-50"
-            >
-              {isLoading ? 'Processing...' : '✅ Approve KYC'}
+            <button onClick={handleApprove} disabled={isLoading} className="flex-1 bg-brand-700 text-white rounded-xl py-2.5 font-semibold hover:bg-brand-800 disabled:opacity-50">
+              {isLoading ? 'Processing…' : '✅ Approve KYC'}
             </button>
-            <button
-              onClick={() => setShowReject(true)}
-              className="px-5 border border-red-300 text-red-600 rounded-xl py-2.5 font-semibold hover:bg-red-50 transition-colors"
-            >
+            <button onClick={() => setShowReject(true)} className="px-5 border border-red-300 text-red-600 rounded-xl py-2.5 font-semibold hover:bg-red-50">
               ❌ Reject
             </button>
           </>
@@ -102,12 +93,8 @@ export function KYCActions({ farmerId }: { farmerId: string }) {
           />
           <div className="flex gap-2">
             <button onClick={() => setShowReject(false)} className="flex-1 border border-gray-300 rounded-lg py-2 text-sm font-medium">Cancel</button>
-            <button
-              onClick={handleReject}
-              disabled={!rejectionReason || isLoading}
-              className="flex-1 bg-red-600 text-white rounded-lg py-2 text-sm font-semibold disabled:opacity-50"
-            >
-              {isLoading ? 'Rejecting...' : 'Confirm Rejection'}
+            <button onClick={handleReject} disabled={!rejectionReason || isLoading} className="flex-1 bg-red-600 text-white rounded-lg py-2 text-sm font-semibold disabled:opacity-50">
+              {isLoading ? 'Rejecting…' : 'Confirm Rejection'}
             </button>
           </div>
         </div>

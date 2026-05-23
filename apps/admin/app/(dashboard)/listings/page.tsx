@@ -55,7 +55,7 @@ export default async function ListingsPage() {
                 </div>
               )}
 
-              <ListingApprovalActions listingId={listing.id} />
+              <ListingApprovalActions listingId={listing.id} listing={listing} />
             </div>
           ))}
         </div>

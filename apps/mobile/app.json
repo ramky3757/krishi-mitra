@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "HarvestBond",
-    "slug": "harvestbond",
+    "name": "Krishi Mitra",
+    "slug": "krishi-mitra",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "scheme": "harvestbond",
+    "scheme": "krishimitra",
     "userInterfaceStyle": "automatic",
     "splash": {
       "image": "./assets/splash.png",
@@ -15,11 +15,11 @@
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.harvestbond.app",
+      "bundleIdentifier": "com.krishimitra.app",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "HarvestBond uses your location to show nearby farms and crops.",
-        "NSCameraUsageDescription": "HarvestBond needs camera access to take farm photos.",
-        "NSPhotoLibraryUsageDescription": "HarvestBond needs photo library access to upload farm images."
+        "NSLocationWhenInUseUsageDescription": "Krishi Mitra uses your location to show nearby farms and crops.",
+        "NSCameraUsageDescription": "Krishi Mitra needs camera access to take farm photos.",
+        "NSPhotoLibraryUsageDescription": "Krishi Mitra needs photo library access to upload farm images."
       }
     },
     "android": {
@@ -27,7 +27,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#1a6b3c"
       },
-      "package": "com.harvestbond.app",
+      "package": "com.krishimitra.app",
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
@@ -38,7 +38,7 @@
     },
     "web": {
       "bundler": "metro",
-      "output": "static",
+      "output": "spa",
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
@@ -48,13 +48,13 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "HarvestBond uses your location to show nearby farms."
+          "locationWhenInUsePermission": "Krishi Mitra uses your location to show nearby farms."
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "HarvestBond accesses your photos to upload farm images."
+          "photosPermission": "Krishi Mitra accesses your photos to upload farm images."
         }
       ],
       [

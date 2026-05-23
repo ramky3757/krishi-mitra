@@ -1,19 +1,28 @@
-import { View, Text, Pressable, ScrollView, Alert } from 'react-native';
+import { useState } from 'react';
+import { View, Text, Pressable, ScrollView } from 'react-native';
 import { router } from 'expo-router';
+import { Button, Dialog, Portal } from 'react-native-paper';
 import { useAuthStore } from '@/stores/authStore';
 import { VERIFICATION_BADGES } from '@/constants';
 
 export default function FarmerProfileScreen() {
   const { user, farmerProfile, signOut } = useAuthStore();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
 
-  const handleSignOut = () => {
-    Alert.alert('Sign Out', 'Are you sure?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Sign Out', style: 'destructive', onPress: signOut },
-    ]);
+  const doSignOut = async () => {
+    setSigningOut(true);
+    try {
+      await signOut();
+      setConfirmOpen(false);
+      router.replace('/(auth)/welcome');
+    } finally {
+      setSigningOut(false);
+    }
   };
 
   return (
+    <>
     <ScrollView className="flex-1 bg-gray-50">
       <View className="bg-brand-700 pt-14 pb-8 px-5 items-center">
         <View className="w-24 h-24 rounded-full bg-white/20 items-center justify-center mb-3">
@@ -76,13 +85,29 @@ export default function FarmerProfileScreen() {
           <MenuItem icon="🔒" label="Privacy Policy" onPress={() => {}} />
         </View>
 
-        <Pressable onPress={handleSignOut} className="bg-red-50 border border-red-200 rounded-2xl py-4 items-center">
+        <Pressable onPress={() => setConfirmOpen(true)} className="bg-red-50 border border-red-200 rounded-2xl py-4 items-center">
           <Text className="text-red-600 font-semibold">Sign Out</Text>
         </Pressable>
 
-        <Text className="text-center text-gray-400 text-xs pb-4">HarvestBond v1.0.0</Text>
+        <Text className="text-center text-gray-400 text-xs pb-4">Krishi Mitra v1.0.0</Text>
       </View>
     </ScrollView>
+
+    <Portal>
+      <Dialog visible={confirmOpen} onDismiss={() => !signingOut && setConfirmOpen(false)}>
+        <Dialog.Title>Sign Out?</Dialog.Title>
+        <Dialog.Content>
+          <Text>You'll need to sign in again to manage your listings and orders.</Text>
+        </Dialog.Content>
+        <Dialog.Actions>
+          <Button onPress={() => setConfirmOpen(false)} disabled={signingOut}>Cancel</Button>
+          <Button onPress={doSignOut} loading={signingOut} disabled={signingOut} textColor="#b91c1c">
+            Sign Out
+          </Button>
+        </Dialog.Actions>
+      </Dialog>
+    </Portal>
+    </>
   );
 }
 

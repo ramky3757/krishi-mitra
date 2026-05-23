@@ -13,9 +13,11 @@ export default function BrowseScreen() {
   const [selectedCategory, setSelectedCategory] = useState<CropCategory | null>(null);
   const [selectedMethod, setSelectedMethod] = useState<FarmingMethod | null>(null);
 
+  // Re-fetch whenever filters change (including the initial mount).
   useEffect(() => {
     fetchListings(true);
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(filters)]);
 
   const applyFilters = () => {
     setFilters({
@@ -123,22 +125,35 @@ export default function BrowseScreen() {
         onEndReached={() => { if (hasMore && !isLoading) fetchListings(); }}
         onEndReachedThreshold={0.3}
         ListHeaderComponent={
-          <Text className="text-gray-500 text-sm mb-3">
-            {filteredListings.length} crop{filteredListings.length !== 1 ? 's' : ''} found
-          </Text>
+          filteredListings.length > 0 ? (
+            <Text className="text-gray-500 text-sm mb-3">
+              {filteredListings.length} crop{filteredListings.length !== 1 ? 's' : ''} found
+            </Text>
+          ) : null
         }
         ListFooterComponent={isLoading ? <ActivityIndicator color="#1a6b3c" className="py-6" /> : null}
         ListEmptyComponent={
-          !isLoading ? (
+          isLoading ? (
+            <View className="items-center py-16">
+              <ActivityIndicator color="#1a6b3c" size="large" />
+              <Text className="text-gray-400 text-sm mt-3">Loading crops…</Text>
+            </View>
+          ) : (
             <View className="items-center py-16">
               <Text className="text-5xl mb-3">🌾</Text>
               <Text className="text-gray-600 font-semibold">No crops found</Text>
-              <Text className="text-gray-400 text-sm mt-1 text-center">Try adjusting your filters</Text>
-              <Pressable onPress={resetFilters} className="mt-4 bg-brand-100 rounded-xl px-5 py-2">
-                <Text className="text-brand-700 font-semibold">Clear Filters</Text>
-              </Pressable>
+              <Text className="text-gray-400 text-sm mt-1 text-center">
+                {Object.keys(filters).length > 0
+                  ? 'Try adjusting your filters'
+                  : 'Farmers are preparing their crops.\nCheck back soon!'}
+              </Text>
+              {Object.keys(filters).length > 0 && (
+                <Pressable onPress={resetFilters} className="mt-4 bg-brand-100 rounded-xl px-5 py-2">
+                  <Text className="text-brand-700 font-semibold">Clear Filters</Text>
+                </Pressable>
+              )}
             </View>
-          ) : null
+          )
         }
       />
     </View>

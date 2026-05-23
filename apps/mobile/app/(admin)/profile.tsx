@@ -4,8 +4,8 @@ import { router } from 'expo-router';
 import { Button, Dialog, Portal } from 'react-native-paper';
 import { useAuthStore } from '@/stores/authStore';
 
-export default function ConsumerProfileScreen() {
-  const { user, consumerProfile, signOut } = useAuthStore();
+export default function AdminProfileScreen() {
+  const { user, signOut } = useAuthStore();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
 
@@ -25,33 +25,22 @@ export default function ConsumerProfileScreen() {
       <ScrollView className="flex-1 bg-gray-50">
         {/* Header */}
         <View className="bg-brand-700 pt-14 pb-8 px-5 items-center">
-          <View className="w-20 h-20 rounded-full bg-white/20 items-center justify-center mb-3">
-            <Text className="text-4xl">👤</Text>
+          <View className="w-24 h-24 rounded-full bg-white/20 items-center justify-center mb-3">
+            <Text className="text-5xl">🛡️</Text>
           </View>
           <Text className="text-white text-xl font-bold">{user?.full_name}</Text>
           <Text className="text-brand-300 mt-0.5">{user?.email ?? user?.phone}</Text>
-          {consumerProfile?.state && (
-            <Text className="text-brand-300 text-sm mt-1">
-              📍 {consumerProfile.district ? `${consumerProfile.district}, ` : ''}{consumerProfile.state}
-            </Text>
-          )}
+          <View className="mt-3 rounded-full bg-white/20 px-4 py-1.5">
+            <Text className="text-white text-sm font-semibold">⚙️ Platform Administrator</Text>
+          </View>
         </View>
 
         <View className="px-5 pt-5 gap-4">
-          {/* Quick stats */}
-          <View className="flex-row gap-3">
-            <StatBox icon="📦" label="Bookings" value="—" />
-            <StatBox icon="🚜" label="Farm Visits" value="—" />
-            <StatBox icon="⭐" label="Reviews" value="—" />
-          </View>
-
-          {/* Menu items */}
+          {/* Quick nav */}
           <View className="bg-white rounded-3xl overflow-hidden">
-            <MenuItem icon="📦" label="My Bookings" onPress={() => router.push('/(consumer)/bookings')} />
-            <MenuItem icon="🔔" label="Notifications" onPress={() => {}} />
-            <MenuItem icon="📍" label="Delivery Addresses" onPress={() => {}} />
-            <MenuItem icon="💬" label="Support" onPress={() => {}} />
-            <MenuItem icon="⚙️" label="Account Settings" onPress={() => {}} />
+            <MenuItem icon="🌾" label="Listing Approvals" onPress={() => router.push('/(admin)/listings')} />
+            <MenuItem icon="🪪" label="KYC Review" onPress={() => router.push('/(admin)/kyc')} />
+            <MenuItem icon="👥" label="Users" onPress={() => router.push('/(admin)/users')} />
           </View>
 
           <View className="bg-white rounded-3xl overflow-hidden">
@@ -66,7 +55,7 @@ export default function ConsumerProfileScreen() {
             <Text className="text-red-600 font-semibold">Sign Out</Text>
           </Pressable>
 
-          <Text className="text-center text-gray-400 text-xs pb-4">Krishi Mitra v1.0.0</Text>
+          <Text className="text-center text-gray-400 text-xs pb-4">Krishi Mitra v1.0.0 · Admin</Text>
         </View>
       </ScrollView>
 
@@ -74,12 +63,10 @@ export default function ConsumerProfileScreen() {
         <Dialog visible={confirmOpen} onDismiss={() => !signingOut && setConfirmOpen(false)}>
           <Dialog.Title>Sign Out?</Dialog.Title>
           <Dialog.Content>
-            <Text>You'll need to sign in again to view your bookings and pre-orders.</Text>
+            <Text>You will be signed out of the admin panel.</Text>
           </Dialog.Content>
           <Dialog.Actions>
-            <Button onPress={() => setConfirmOpen(false)} disabled={signingOut}>
-              Cancel
-            </Button>
+            <Button onPress={() => setConfirmOpen(false)} disabled={signingOut}>Cancel</Button>
             <Button onPress={doSignOut} loading={signingOut} disabled={signingOut} textColor="#b91c1c">
               Sign Out
             </Button>
@@ -87,16 +74,6 @@ export default function ConsumerProfileScreen() {
         </Dialog>
       </Portal>
     </>
-  );
-}
-
-function StatBox({ icon, label, value }: { icon: string; label: string; value: string }) {
-  return (
-    <View className="flex-1 bg-white rounded-2xl p-4 items-center">
-      <Text className="text-2xl mb-1">{icon}</Text>
-      <Text className="text-gray-900 font-bold text-lg">{value}</Text>
-      <Text className="text-gray-400 text-xs">{label}</Text>
-    </View>
   );
 }
 

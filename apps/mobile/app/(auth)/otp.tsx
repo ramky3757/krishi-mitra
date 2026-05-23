@@ -4,11 +4,11 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useAuthStore } from '@/stores/authStore';
 
 export default function OTPScreen() {
-  const { phone } = useLocalSearchParams<{ phone: string }>();
+  const { email } = useLocalSearchParams<{ email: string }>();
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [error, setError] = useState('');
   const [resendTimer, setResendTimer] = useState(0);
-  const { verifyOTP, signInWithPhone, isLoading } = useAuthStore();
+  const { verifyEmailOTP, signInWithEmail, isLoading } = useAuthStore();
   const inputRefs = useRef<(TextInput | null)[]>([]);
 
   const handleDigit = (value: string, index: number) => {
@@ -26,9 +26,11 @@ export default function OTPScreen() {
     if (code.length < 6) return;
     setError('');
     try {
-      await verifyOTP(phone, code);
+      await verifyEmailOTP(email, code);
+      // Route to root so index.tsx can pick the right home based on role.
+      router.replace('/');
     } catch (e: any) {
-      setError(e.message ?? 'Invalid OTP. Please try again.');
+      setError(e.message ?? 'Invalid code. Please try again.');
       setOtp(['', '', '', '', '', '']);
       inputRefs.current[0]?.focus();
     }
@@ -36,7 +38,7 @@ export default function OTPScreen() {
 
   const handleResend = async () => {
     try {
-      await signInWithPhone(phone);
+      await signInWithEmail(email);
       setResendTimer(60);
       const interval = setInterval(() => {
         setResendTimer((t) => {
@@ -59,11 +61,11 @@ export default function OTPScreen() {
           <Text className="text-brand-700 text-base">← Back</Text>
         </Pressable>
 
-        <Text className="text-3xl font-bold text-gray-900 mb-2">Verify your number</Text>
+        <Text className="text-3xl font-bold text-gray-900 mb-2">Check your email</Text>
         <Text className="text-gray-500 text-base mb-2">
           Enter the 6-digit code sent to
         </Text>
-        <Text className="text-gray-900 font-semibold text-base mb-10">{phone}</Text>
+        <Text className="text-gray-900 font-semibold text-base mb-10">{email}</Text>
 
         {/* OTP boxes */}
         <View className="flex-row gap-3 mb-4">
@@ -85,16 +87,19 @@ export default function OTPScreen() {
 
         {error ? (
           <Text className="text-red-500 text-sm text-center">{error}</Text>
-        ) : null}
+        ) : (
+          <Text className="text-gray-400 text-sm text-center">
+            Didn't get it? Check your spam folder too.
+          </Text>
+        )}
 
-        {/* Resend */}
         <View className="flex-row justify-center mt-4">
           <Text className="text-gray-500 text-sm">Didn't receive it? </Text>
           {resendTimer > 0 ? (
             <Text className="text-gray-400 text-sm">Resend in {resendTimer}s</Text>
           ) : (
             <Pressable onPress={handleResend}>
-              <Text className="text-brand-700 text-sm font-semibold">Resend OTP</Text>
+              <Text className="text-brand-700 text-sm font-semibold">Resend Code</Text>
             </Pressable>
           )}
         </View>

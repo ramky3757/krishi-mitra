@@ -7,46 +7,69 @@ import { formatCurrency, formatWeight } from '@/lib/formatters';
 
 interface DashboardStats {
   activeListings: number;
+  pendingListings: number;
   pendingBookings: number;
   totalEarned: number;
+  advanceEarned: number;
   totalKgBooked: number;
 }
 
 export default function FarmerDashboard() {
   const { user, farmerProfile } = useAuthStore();
-  const [stats, setStats] = useState<DashboardStats>({ activeListings: 0, pendingBookings: 0, totalEarned: 0, totalKgBooked: 0 });
-  const [isLoading, setIsLoading] = useState(true);
+  const [stats, setStats] = useState<DashboardStats>({
+    activeListings: 0,
+    pendingListings: 0,
+    pendingBookings: 0,
+    totalEarned: 0,
+    advanceEarned: 0,
+    totalKgBooked: 0,
+  });
+  const [isLoading, setIsLoading] = useState(false);
   const [recentBookings, setRecentBookings] = useState<any[]>([]);
 
   useEffect(() => {
-    loadDashboard();
-  }, []);
+    if (user?.id) loadDashboard();
+  }, [user?.id]);
 
   const loadDashboard = async () => {
-    if (!user) return;
+    if (!user?.id) return;
     setIsLoading(true);
     try {
-      const [listingsRes, bookingsRes] = await Promise.all([
-        supabase.from('crop_listings').select('id, status').eq('farmer_id', user.id),
-        supabase.from('bookings')
-          .select('*, listing:crop_listings!inner(farmer_id), consumer:consumer_profiles(*, user:users(*))')
-          .eq('listing.farmer_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(5),
-      ]);
+      // Step 1: get this farmer's listings
+      const { data: listings } = await supabase
+        .from('crop_listings')
+        .select('id, status, available_qty_kg, booked_qty_kg')
+        .eq('farmer_id', user.id);
 
-      const listings = listingsRes.data ?? [];
-      const bookings = bookingsRes.data ?? [];
+      const listingIds = (listings ?? []).map((l) => l.id);
 
-      const activeListings = listings.filter((l) => l.status === 'active').length;
-      const pendingBookings = bookings.filter((b: any) => b.status === 'pending').length;
-      const totalEarned = bookings
-        .filter((b: any) => ['delivered'].includes(b.status))
+      // Step 2: get bookings for those listings (RLS also enforces this)
+      const { data: bookings } = listingIds.length > 0
+        ? await supabase
+            .from('bookings')
+            .select('id, qty_kg, advance_amount, total_amount, status, created_at, consumer:users!consumer_id(full_name)')
+            .in('listing_id', listingIds)
+            .order('created_at', { ascending: false })
+            .limit(5)
+        : { data: [] };
+
+      const activeListings = (listings ?? []).filter((l) => l.status === 'active').length;
+      const pendingListings = (listings ?? []).filter((l) => l.status === 'pending_approval').length;
+      const pendingBookings = (bookings ?? []).filter((b: any) => b.status === 'pending').length;
+
+      // Advance received: confirmed + in_progress + harvested + shipped + delivered
+      const advanceEarned = (bookings ?? [])
+        .filter((b: any) => ['confirmed', 'in_progress', 'harvested', 'shipped', 'delivered'].includes(b.status))
+        .reduce((sum: number, b: any) => sum + (b.advance_amount ?? 0), 0);
+      // Full payment received: shipped + delivered
+      const totalEarned = (bookings ?? [])
+        .filter((b: any) => ['shipped', 'delivered'].includes(b.status))
         .reduce((sum: number, b: any) => sum + (b.total_amount ?? 0), 0);
-      const totalKgBooked = bookings.reduce((sum: number, b: any) => sum + (b.qty_kg ?? 0), 0);
 
-      setStats({ activeListings, pendingBookings, totalEarned, totalKgBooked });
-      setRecentBookings(bookings.slice(0, 5));
+      const totalKgBooked = (bookings ?? []).reduce((sum: number, b: any) => sum + (b.qty_kg ?? 0), 0);
+
+      setStats({ activeListings, pendingListings, pendingBookings, totalEarned, advanceEarned, totalKgBooked });
+      setRecentBookings((bookings ?? []).slice(0, 5));
     } finally {
       setIsLoading(false);
     }
@@ -63,25 +86,39 @@ export default function FarmerDashboard() {
         <Text className="text-white text-2xl font-bold mt-0.5">
           {user?.full_name?.split(' ')[0] ?? 'Farmer'} 🧑‍🌾
         </Text>
-        <Text className="text-brand-300 text-sm mt-1">
-          {farmerProfile?.village ? `${farmerProfile.village}, ` : ''}
-          {farmerProfile?.district}, {farmerProfile?.state}
-        </Text>
+        {farmerProfile?.state ? (
+          <Text className="text-brand-300 text-sm mt-1">
+            {farmerProfile.village ? `${farmerProfile.village}, ` : ''}
+            {farmerProfile.district}, {farmerProfile.state}
+          </Text>
+        ) : null}
       </View>
 
       <View className="px-5 -mt-4 gap-4">
         {/* KYC status banner */}
-        {!isKycApproved && (
-          <View className={`rounded-3xl p-4 border ${kycStatus === 'under_review' ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200'}`}>
-            <Text className={`font-bold ${kycStatus === 'under_review' ? 'text-amber-800' : 'text-red-700'}`}>
-              {kycStatus === 'under_review' ? '⏳ KYC Under Review' : '⚠️ KYC Not Approved'}
-            </Text>
-            <Text className={`text-sm mt-1 ${kycStatus === 'under_review' ? 'text-amber-700' : 'text-red-600'}`}>
-              {kycStatus === 'under_review'
-                ? 'Your documents are being verified. You\'ll be notified within 24–48 hours.'
-                : 'Please complete your KYC verification to start listing crops.'}
-            </Text>
-          </View>
+        {!isKycApproved && (() => {
+          const isPending = kycStatus === 'pending' || kycStatus === 'under_review';
+          return (
+            <View className={`rounded-3xl p-4 border ${isPending ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200'}`}>
+              <Text className={`font-bold ${isPending ? 'text-amber-800' : 'text-red-700'}`}>
+                {isPending ? '⏳ KYC Under Review' : '⚠️ KYC Not Approved'}
+              </Text>
+              <Text className={`text-sm mt-1 ${isPending ? 'text-amber-700' : 'text-red-600'}`}>
+                {isPending
+                  ? "Your documents are being verified. You'll be notified within 24–48 hours."
+                  : 'Complete your KYC verification to start listing crops.'}
+              </Text>
+              {!isPending && (
+                <Pressable
+                  onPress={() => router.push('/(auth)/farmer-kyc')}
+                  className="mt-3 bg-red-700 rounded-xl py-2 px-4 self-start"
+                >
+                  <Text className="text-white text-sm font-semibold">Complete KYC →</Text>
+                </Pressable>
+              )}
+            </View>
+          );
+        })()}
         )}
 
         {/* Stats grid */}
@@ -90,8 +127,9 @@ export default function FarmerDashboard() {
         ) : (
           <View className="flex-row flex-wrap gap-3">
             <StatCard icon="🌾" label="Active Listings" value={String(stats.activeListings)} color="green" />
-            <StatCard icon="📬" label="Pending Orders" value={String(stats.pendingBookings)} color="amber" />
-            <StatCard icon="📦" label="Total Booked" value={formatWeight(stats.totalKgBooked)} color="blue" />
+            <StatCard icon="⏳" label="Pending Approval" value={String(stats.pendingListings)} color="amber" />
+            <StatCard icon="📬" label="Pending Orders" value={String(stats.pendingBookings)} color="blue" />
+            <StatCard icon="💵" label="Advance Received" value={formatCurrency(stats.advanceEarned)} color="blue" />
             <StatCard icon="💰" label="Total Earned" value={formatCurrency(stats.totalEarned)} color="teal" />
           </View>
         )}
@@ -106,9 +144,14 @@ export default function FarmerDashboard() {
               disabled={!isKycApproved}
               onPress={() => router.push('/(farmer)/create-listing')}
             />
-            <ActionButton emoji="📦" label="View Orders" onPress={() => router.push('/(farmer)/orders')} />
+            <ActionButton emoji="📦" label="Orders" onPress={() => router.push('/(farmer)/orders')} />
             <ActionButton emoji="🌾" label="My Crops" onPress={() => router.push('/(farmer)/listings')} />
           </View>
+          {!isKycApproved && (
+            <Text className="text-gray-400 text-xs text-center mt-3">
+              KYC approval required to post crops
+            </Text>
+          )}
         </View>
 
         {/* Recent bookings */}
@@ -132,14 +175,42 @@ export default function FarmerDashboard() {
                   </View>
                   <View className="flex-1">
                     <Text className="font-semibold text-gray-800" numberOfLines={1}>
-                      {b.consumer?.user?.full_name ?? 'Consumer'}
+                      {b.consumer?.full_name ?? 'Consumer'}
                     </Text>
                     <Text className="text-gray-400 text-xs">{formatWeight(b.qty_kg)} · {b.status}</Text>
                   </View>
-                  <Text className="text-brand-700 font-semibold text-sm">{formatCurrency(b.advance_amount)}</Text>
+                  <View className="items-end">
+                    <Text className="text-brand-700 font-semibold text-sm">
+                      {['shipped', 'delivered'].includes(b.status)
+                        ? formatCurrency(b.total_amount)
+                        : formatCurrency(b.advance_amount)}
+                    </Text>
+                    <Text className="text-gray-400 text-xs">
+                      {['shipped', 'delivered'].includes(b.status) ? 'total' : 'advance'}
+                    </Text>
+                  </View>
                 </Pressable>
               ))}
             </View>
+          </View>
+        )}
+
+        {/* Empty state */}
+        {!isLoading && stats.activeListings === 0 && stats.pendingListings === 0 && (
+          <View className="bg-white rounded-3xl p-6 items-center">
+            <Text className="text-5xl mb-3">🌱</Text>
+            <Text className="font-bold text-gray-900 text-base mb-1">No crops listed yet</Text>
+            <Text className="text-gray-400 text-sm text-center mb-4">
+              Post your first crop listing to start receiving pre-bookings from consumers.
+            </Text>
+            {isKycApproved && (
+              <Pressable
+                onPress={() => router.push('/(farmer)/create-listing')}
+                className="bg-brand-700 rounded-2xl px-6 py-3"
+              >
+                <Text className="text-white font-bold">Post Your First Crop</Text>
+              </Pressable>
+            )}
           </View>
         )}
       </View>

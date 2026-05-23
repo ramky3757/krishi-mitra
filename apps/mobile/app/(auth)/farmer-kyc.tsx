@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { View, Text, Pressable, ScrollView, TextInput, ActivityIndicator, Alert } from 'react-native';
+import { useState, useEffect } from 'react';
+import { View, Text, Pressable, ScrollView, TextInput, ActivityIndicator } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { router } from 'expo-router';
@@ -8,6 +8,7 @@ import { useAuthStore } from '@/stores/authStore';
 
 interface KYCData {
   fullName: string;
+  phone: string;
   farmAddress: string;
   state: string;
   district: string;
@@ -22,8 +23,10 @@ export default function FarmerKYCScreen() {
   const { user, updateProfile, refreshProfile } = useAuthStore();
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [data, setData] = useState<KYCData>({
-    fullName: '',
+    fullName: user?.full_name ?? '',
+    phone: user?.phone ?? '',
     farmAddress: '',
     state: '',
     district: '',
@@ -33,6 +36,23 @@ export default function FarmerKYCScreen() {
     geoLat: null,
     geoLng: null,
   });
+
+  // Ensure profile is loaded and pre-fill known fields
+  useEffect(() => {
+    if (!user?.id) {
+      refreshProfile();
+    }
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      setData((d) => ({
+        ...d,
+        fullName: d.fullName || user.full_name || '',
+        phone: d.phone || user.phone || '',
+      }));
+    }
+  }, [user?.id]);
 
   const pickDocument = async (field: 'idDocUri' | 'landDocUri') => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -57,47 +77,73 @@ export default function FarmerKYCScreen() {
 
   const handleSubmit = async () => {
     setIsLoading(true);
+    setSubmitError(null);
     try {
-      await updateProfile({ full_name: data.fullName });
+      // Always get the auth user directly — don't rely on Zustand store hydration.
+      const { data: { user: authUser }, error: authErr } = await supabase.auth.getUser();
+      if (authErr || !authUser?.id) {
+        setSubmitError('Session not found. Please sign out and sign in again.');
+        return;
+      }
+      const userId = authUser.id;
 
-      // Upload documents to Supabase Storage
+      // Update user's name and phone in public.users (upsert so missing rows are created)
+      const profileUpdates: Record<string, unknown> = { id: userId };
+      if (data.fullName.trim()) profileUpdates.full_name = data.fullName.trim();
+      if (data.phone.trim()) profileUpdates.phone = data.phone.trim();
+      await supabase.from('users').upsert(profileUpdates);
+
+      // Upload documents — treat upload failures as non-fatal (store path if succeeded)
       let idDocUrl = '';
       let landDocUrl = '';
 
       if (data.idDocUri) {
-        const blob = await (await fetch(data.idDocUri)).blob();
-        const { data: up } = await supabase.storage
-          .from('kyc-docs')
-          .upload(`${user?.id}/id_doc.jpg`, blob, { upsert: true });
-        idDocUrl = up?.path ?? '';
+        try {
+          const blob = await (await fetch(data.idDocUri)).blob();
+          const { data: up, error: upErr } = await supabase.storage
+            .from('kyc-docs')
+            .upload(`${userId}/id_doc.jpg`, blob, { upsert: true });
+          if (!upErr) idDocUrl = up?.path ?? '';
+        } catch (_) {
+          // Storage upload failed — continue without the URL
+        }
       }
 
       if (data.landDocUri) {
-        const blob = await (await fetch(data.landDocUri)).blob();
-        const { data: up } = await supabase.storage
-          .from('kyc-docs')
-          .upload(`${user?.id}/land_doc.jpg`, blob, { upsert: true });
-        landDocUrl = up?.path ?? '';
+        try {
+          const blob = await (await fetch(data.landDocUri)).blob();
+          const { data: up, error: upErr } = await supabase.storage
+            .from('kyc-docs')
+            .upload(`${userId}/land_doc.jpg`, blob, { upsert: true });
+          if (!upErr) landDocUrl = up?.path ?? '';
+        } catch (_) {
+          // Storage upload failed — continue without the URL
+        }
       }
 
-      await supabase.from('farmer_profiles').upsert({
-        user_id: user?.id,
-        kyc_status: 'under_review',
-        id_doc_url: idDocUrl,
-        land_doc_url: landDocUrl,
+      // Upsert farmer profile
+      const { error: profileError } = await supabase.from('farmer_profiles').upsert({
+        user_id: userId,
+        kyc_status: 'pending',
+        id_doc_url: idDocUrl || null,
+        land_doc_url: landDocUrl || null,
         farm_geo_lat: data.geoLat,
         farm_geo_lng: data.geoLng,
-        farm_address: data.farmAddress,
+        farm_address: data.farmAddress || null,
         state: data.state,
         district: data.district,
-        village: data.village,
+        village: data.village || null,
         verification_badges: [],
       });
+
+      if (profileError) {
+        throw new Error(profileError.message);
+      }
 
       await refreshProfile();
       router.replace('/(farmer)/dashboard');
     } catch (e: any) {
-      Alert.alert('Error', e.message ?? 'Failed to submit KYC. Please try again.');
+      setSubmitError(e.message ?? 'Failed to submit KYC. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -118,14 +164,14 @@ export default function FarmerKYCScreen() {
 
         {step === 1 && <Step1 data={data} onChange={setData} onNext={() => setStep(2)} />}
         {step === 2 && <Step2 data={data} pickDocument={pickDocument} captureLocation={captureLocation} onBack={() => setStep(1)} onNext={() => setStep(3)} />}
-        {step === 3 && <Step3 data={data} isLoading={isLoading} onBack={() => setStep(2)} onSubmit={handleSubmit} />}
+        {step === 3 && <Step3 data={data} isLoading={isLoading} error={submitError} onBack={() => setStep(2)} onSubmit={handleSubmit} />}
       </View>
     </ScrollView>
   );
 }
 
 function Step1({ data, onChange, onNext }: any) {
-  const isValid = data.fullName && data.state && data.district;
+  const isValid = data.fullName && data.phone && data.state && data.district;
   return (
     <View className="flex-1">
       <Text className="text-2xl font-bold text-gray-900 mb-1">Basic Details</Text>
@@ -133,6 +179,7 @@ function Step1({ data, onChange, onNext }: any) {
 
       <View className="gap-4">
         <LabeledInput label="Full Name *" placeholder="Your legal name" value={data.fullName} onChange={(v: string) => onChange((d: any) => ({ ...d, fullName: v }))} />
+        <LabeledInput label="Mobile Number *" placeholder="+91 9876543210" value={data.phone} onChange={(v: string) => onChange((d: any) => ({ ...d, phone: v }))} keyboardType="phone-pad" />
         <LabeledInput label="Farm Address" placeholder="Village / Town, District" value={data.farmAddress} onChange={(v: string) => onChange((d: any) => ({ ...d, farmAddress: v }))} />
         <LabeledInput label="State *" placeholder="e.g. Telangana" value={data.state} onChange={(v: string) => onChange((d: any) => ({ ...d, state: v }))} />
         <LabeledInput label="District *" placeholder="e.g. Nalgonda" value={data.district} onChange={(v: string) => onChange((d: any) => ({ ...d, district: v }))} />
@@ -198,14 +245,21 @@ function Step2({ data, pickDocument, captureLocation, onBack, onNext }: any) {
   );
 }
 
-function Step3({ data, isLoading, onBack, onSubmit }: any) {
+function Step3({ data, isLoading, error, onBack, onSubmit }: any) {
   return (
     <View className="flex-1">
       <Text className="text-2xl font-bold text-gray-900 mb-1">Review & Submit</Text>
       <Text className="text-gray-500 mb-8">Your KYC will be reviewed within 24–48 hours. You can still explore the app while waiting.</Text>
 
+      {error && (
+        <View className="mb-4 bg-red-50 border border-red-200 rounded-2xl px-4 py-3">
+          <Text className="text-red-700 text-sm font-medium">⚠️ {error}</Text>
+        </View>
+      )}
+
       <View className="bg-brand-50 border border-brand-200 rounded-2xl p-5 gap-3">
         <ReviewRow icon="👤" label="Name" value={data.fullName} />
+        <ReviewRow icon="📱" label="Mobile" value={data.phone} />
         <ReviewRow icon="📍" label="Location" value={`${data.district}, ${data.state}`} />
         <ReviewRow icon="🪪" label="Govt ID" value={data.idDocUri ? 'Uploaded ✓' : 'Not uploaded'} />
         <ReviewRow icon="📄" label="Land Record" value={data.landDocUri ? 'Uploaded ✓' : 'Not uploaded'} />
@@ -231,7 +285,7 @@ function Step3({ data, isLoading, onBack, onSubmit }: any) {
   );
 }
 
-function LabeledInput({ label, placeholder, value, onChange }: any) {
+function LabeledInput({ label, placeholder, value, onChange, keyboardType }: any) {
   return (
     <View>
       <Text className="text-gray-700 font-semibold mb-1.5">{label}</Text>
@@ -240,6 +294,7 @@ function LabeledInput({ label, placeholder, value, onChange }: any) {
         placeholder={placeholder}
         value={value}
         onChangeText={onChange}
+        keyboardType={keyboardType ?? 'default'}
       />
     </View>
   );
