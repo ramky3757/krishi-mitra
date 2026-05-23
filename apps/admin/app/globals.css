@@ -1,3 +1,10 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Fallback brand colors in case Tailwind config doesn't load */
+:root {
+  --brand-700: #1a6b3c;
+  --brand-600: #16a34a;
+  --brand-300: #86efac;
+}
