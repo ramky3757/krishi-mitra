@@ -1,0 +1,72 @@
+{
+  "expo": {
+    "name": "HarvestBond",
+    "slug": "harvestbond",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "harvestbond",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1a6b3c"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.harvestbond.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "HarvestBond uses your location to show nearby farms and crops.",
+        "NSCameraUsageDescription": "HarvestBond needs camera access to take farm photos.",
+        "NSPhotoLibraryUsageDescription": "HarvestBond needs photo library access to upload farm images."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1a6b3c"
+      },
+      "package": "com.harvestbond.app",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "HarvestBond uses your location to show nearby farms."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "HarvestBond accesses your photos to upload farm images."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#1a6b3c"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
