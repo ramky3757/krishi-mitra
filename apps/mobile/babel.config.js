@@ -1,6 +1,6 @@
 module.exports = function (api) {
-  api.cache(true);
   const isWeb = api.caller((caller) => caller?.platform === 'web');
+  api.cache.using(() => isWeb);
   return {
     presets: [
       ['babel-preset-expo', { jsxImportSource: 'nativewind' }],
