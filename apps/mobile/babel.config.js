@@ -3,12 +3,9 @@ module.exports = function (api) {
   api.cache.using(() => isWeb);
   return {
     presets: [
-      ['babel-preset-expo', { jsxImportSource: 'nativewind' }],
+      ['babel-preset-expo', { jsxImportSource: 'nativewind', reanimated: !isWeb }],
       'nativewind/babel',
     ],
-    plugins: [
-      // reanimated/plugin uses native-only worklets transform, skip on web
-      ...(!isWeb ? ['react-native-reanimated/plugin'] : []),
-    ],
+    plugins: [],
   };
 };
