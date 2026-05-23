@@ -5,12 +5,18 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   if (pathname === '/login') return NextResponse.next();
 
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  // If env vars missing, let the page handle the error rather than 500 in middleware
+  if (!url || !key) {
+    return NextResponse.redirect(new URL('/login', request.url));
+  }
+
   let response = NextResponse.next({ request });
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
+  try {
+    const supabase = createServerClient(url, key, {
       cookies: {
         getAll() { return request.cookies.getAll(); },
         setAll(cookiesToSet: { name: string; value: string; options?: object }[]) {
@@ -21,11 +27,13 @@ export async function middleware(request: NextRequest) {
           );
         },
       },
-    }
-  );
+    });
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+  } catch {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
