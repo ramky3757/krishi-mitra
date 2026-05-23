@@ -1,5 +1,6 @@
 export const dynamic = 'force-dynamic';
 
+import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 
 
@@ -22,9 +23,17 @@ export default async function UsersPage() {
 
   return (
     <div className="p-8">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Users</h1>
-        <p className="text-gray-500 text-sm mt-1">{users.length} registered users</p>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Users</h1>
+          <p className="text-gray-500 text-sm mt-1">{users.length} registered users</p>
+        </div>
+        <Link
+          href="/users/new"
+          className="bg-brand-700 hover:bg-brand-800 text-white font-semibold px-4 py-2.5 rounded-xl text-sm transition-colors"
+        >
+          + New User
+        </Link>
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
