@@ -1,6 +1,14 @@
 'use server';
 
+import { redirect } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { createAuthClient } from '@/lib/supabase-auth';
+
+export async function signOut() {
+  const client = await createAuthClient();
+  await client.auth.signOut();
+  redirect('/login');
+}
 
 export async function approveListing(listingId: string) {
   const { error } = await supabase
