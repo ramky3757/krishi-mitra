@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'HarvestBond Admin',
-  description: 'Admin panel for HarvestBond platform',
+  title: 'Krishi Mitra Admin',
+  description: 'Admin panel for Krishi Mitra — farm-to-consumer platform',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
