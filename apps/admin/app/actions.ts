@@ -104,3 +104,19 @@ export async function createUser(formData: FormData) {
 
   redirect('/users');
 }
+
+export async function deleteUser(userId: string) {
+  // Remove auth user (cascades clean up sessions/identities)
+  const { error: authErr } = await supabase.auth.admin.deleteUser(userId);
+  if (authErr && !authErr.message.toLowerCase().includes('not found')) {
+    throw new Error(authErr.message);
+  }
+  // Remove profile row (in case auth user was already gone)
+  const { error } = await supabase.from('users').delete().eq('id', userId);
+  if (error) throw new Error(error.message);
+}
+
+export async function updateUserRole(userId: string, role: 'farmer' | 'consumer' | 'admin') {
+  const { error } = await supabase.from('users').update({ role }).eq('id', userId);
+  if (error) throw new Error(error.message);
+}

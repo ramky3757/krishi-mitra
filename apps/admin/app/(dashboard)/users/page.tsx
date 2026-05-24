@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
+import UserRowActions from '@/components/UserRowActions';
 
 
 async function getUsers() {
@@ -45,11 +46,12 @@ export default async function UsersPage() {
               <th className="text-left px-5 py-3 text-gray-500 font-medium">Phone</th>
               <th className="text-left px-5 py-3 text-gray-500 font-medium">Role</th>
               <th className="text-left px-5 py-3 text-gray-500 font-medium">Joined</th>
+              <th className="text-right px-5 py-3 text-gray-500 font-medium">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
             {users.length === 0 ? (
-              <tr><td colSpan={5} className="text-center py-12 text-gray-400">No users yet</td></tr>
+              <tr><td colSpan={6} className="text-center py-12 text-gray-400">No users yet</td></tr>
             ) : users.map((u: any) => (
               <tr key={u.id} className="hover:bg-gray-50">
                 <td className="px-5 py-3 font-medium text-gray-900">{u.full_name || '—'}</td>
@@ -64,6 +66,9 @@ export default async function UsersPage() {
                 </td>
                 <td className="px-5 py-3 text-gray-400 text-xs">
                   {u.created_at ? new Date(u.created_at).toLocaleDateString() : '—'}
+                </td>
+                <td className="px-5 py-3">
+                  <UserRowActions userId={u.id} email={u.email ?? ''} currentRole={u.role} />
                 </td>
               </tr>
             ))}
