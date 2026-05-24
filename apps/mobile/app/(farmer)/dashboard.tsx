@@ -119,7 +119,6 @@ export default function FarmerDashboard() {
             </View>
           );
         })()}
-        )}
 
         {/* Stats grid */}
         {isLoading ? (
