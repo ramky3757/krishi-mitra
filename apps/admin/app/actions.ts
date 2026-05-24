@@ -116,6 +116,22 @@ export async function deleteUser(userId: string) {
   if (error) throw new Error(error.message);
 }
 
+export async function approveConsumerKYC(userId: string) {
+  const { error } = await supabase
+    .from('consumer_profiles')
+    .update({ kyc_status: 'approved', kyc_reviewed_at: new Date().toISOString(), kyc_rejection_reason: null })
+    .eq('user_id', userId);
+  if (error) throw new Error(error.message);
+}
+
+export async function rejectConsumerKYC(userId: string, reason: string) {
+  const { error } = await supabase
+    .from('consumer_profiles')
+    .update({ kyc_status: 'rejected', kyc_reviewed_at: new Date().toISOString(), kyc_rejection_reason: reason })
+    .eq('user_id', userId);
+  if (error) throw new Error(error.message);
+}
+
 export async function updateUserRole(userId: string, role: 'farmer' | 'consumer' | 'admin') {
   const { error } = await supabase.from('users').update({ role }).eq('id', userId);
   if (error) throw new Error(error.message);

@@ -7,8 +7,10 @@ import { CropListingCard } from '@/components/CropListingCard';
 import { CROP_CATEGORIES } from '@/constants';
 
 export default function HomeScreen() {
-  const { user } = useAuthStore();
+  const { user, consumerProfile } = useAuthStore();
   const { featuredListings, fetchFeaturedListings, isLoading, setFilters } = useListingsStore();
+  const kycStatus = consumerProfile?.kyc_status ?? 'incomplete';
+  const isKycIncomplete = kycStatus === 'incomplete' || kycStatus === 'rejected';
 
   useEffect(() => {
     fetchFeaturedListings();
@@ -40,6 +42,32 @@ export default function HomeScreen() {
           <Text className="text-white/70 flex-1">Search crops, farmers…</Text>
         </Pressable>
       </View>
+
+      {/* KYC banner */}
+      {isKycIncomplete && (
+        <Pressable
+          onPress={() => router.push('/(auth)/consumer-kyc')}
+          className="bg-amber-50 border-b border-amber-200 px-5 py-3 flex-row items-center justify-between"
+        >
+          <View className="flex-1">
+            <Text className="text-amber-800 font-semibold text-sm">
+              {kycStatus === 'rejected' ? '⚠️ Profile rejected' : '⚠️ Complete your profile'}
+            </Text>
+            <Text className="text-amber-700 text-xs mt-0.5">
+              Address & ID verification needed before booking →
+            </Text>
+          </View>
+          <Text className="text-amber-700 font-bold">→</Text>
+        </Pressable>
+      )}
+      {kycStatus === 'pending' && (
+        <View className="bg-blue-50 border-b border-blue-200 px-5 py-3">
+          <Text className="text-blue-800 font-semibold text-sm">⏳ Profile under review</Text>
+          <Text className="text-blue-700 text-xs mt-0.5">
+            You can browse and book — full verification will be confirmed shortly.
+          </Text>
+        </View>
+      )}
 
       {/* Category chips */}
       <ScrollView

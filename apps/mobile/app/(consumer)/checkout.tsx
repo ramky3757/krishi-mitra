@@ -3,6 +3,7 @@ import { View, Text, ScrollView, Pressable, TextInput, Alert, ActivityIndicator 
 import { router, useLocalSearchParams } from 'expo-router';
 import { useListingsStore } from '@/stores/listingsStore';
 import { useBookingsStore } from '@/stores/bookingsStore';
+import { useAuthStore } from '@/stores/authStore';
 import { formatCurrency, formatWeight, calculateAdvanceAmount, calculateFinalAmount } from '@/lib/formatters';
 import { ADVANCE_PERCENTAGE_OPTIONS } from '@/constants';
 
@@ -10,6 +11,15 @@ export default function CheckoutScreen() {
   const { listingId } = useLocalSearchParams<{ listingId: string }>();
   const { selectedListing, fetchListingById } = useListingsStore();
   const { createBooking } = useBookingsStore();
+  const { consumerProfile } = useAuthStore();
+  const kycComplete = consumerProfile?.kyc_status === 'approved' || consumerProfile?.kyc_status === 'pending';
+
+  useEffect(() => {
+    // Gate booking on profile completion
+    if (consumerProfile !== null && !kycComplete) {
+      router.replace('/(auth)/consumer-kyc');
+    }
+  }, [consumerProfile, kycComplete]);
 
   const [qty, setQty] = useState('10');
   const [address, setAddress] = useState('');
