@@ -18,9 +18,18 @@ const STATUS_LABELS: Record<string, { label: string; bg: string; text: string }>
 };
 
 export default function FarmerListingsScreen() {
-  const { user } = useAuthStore();
+  const { user, farmerProfile } = useAuthStore();
+  const isKycApproved = farmerProfile?.kyc_status === 'approved';
   const [listings, setListings] = useState<CropListing[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+
+  const handleCreate = () => {
+    if (!isKycApproved) {
+      router.push('/(auth)/farmer-kyc');
+      return;
+    }
+    router.push('/(farmer)/create-listing');
+  };
 
   const loadListings = async () => {
     if (!user?.id) return;
@@ -44,12 +53,26 @@ export default function FarmerListingsScreen() {
           <Text className="text-gray-500 text-sm">{listings.length} listing{listings.length !== 1 ? 's' : ''}</Text>
         </View>
         <Pressable
-          onPress={() => router.push('/(farmer)/create-listing')}
-          className="bg-brand-700 rounded-2xl px-4 py-2.5"
+          onPress={handleCreate}
+          disabled={!isKycApproved}
+          className={`rounded-2xl px-4 py-2.5 ${isKycApproved ? 'bg-brand-700' : 'bg-gray-200'}`}
         >
-          <Text className="text-white font-semibold text-sm">+ New Listing</Text>
+          <Text className={`font-semibold text-sm ${isKycApproved ? 'text-white' : 'text-gray-400'}`}>
+            {isKycApproved ? '+ New Listing' : '🔒 KYC Required'}
+          </Text>
         </Pressable>
       </View>
+
+      {!isKycApproved && (
+        <Pressable
+          onPress={() => router.push('/(auth)/farmer-kyc')}
+          className="bg-amber-50 border-b border-amber-200 px-5 py-3"
+        >
+          <Text className="text-amber-800 text-sm font-medium">
+            ⚠️ Complete KYC to post crops →
+          </Text>
+        </Pressable>
+      )}
 
       <FlatList
         data={listings}
@@ -65,10 +88,13 @@ export default function FarmerListingsScreen() {
               <Text className="text-gray-700 font-semibold text-lg">No listings yet</Text>
               <Text className="text-gray-400 text-sm mt-1 text-center">Post your first crop to start receiving bookings</Text>
               <Pressable
-                onPress={() => router.push('/(farmer)/create-listing')}
-                className="mt-5 bg-brand-700 rounded-2xl px-6 py-3"
+                onPress={handleCreate}
+                disabled={!isKycApproved}
+                className={`mt-5 rounded-2xl px-6 py-3 ${isKycApproved ? 'bg-brand-700' : 'bg-gray-200'}`}
               >
-                <Text className="text-white font-bold">Post a Crop</Text>
+                <Text className={`font-bold ${isKycApproved ? 'text-white' : 'text-gray-500'}`}>
+                  {isKycApproved ? 'Post a Crop' : '🔒 Complete KYC First'}
+                </Text>
               </Pressable>
             </View>
           ) : <ActivityIndicator color="#1a6b3c" size="large" className="py-10" />

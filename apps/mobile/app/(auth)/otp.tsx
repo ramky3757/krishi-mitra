@@ -79,12 +79,13 @@ export default function OTPScreen() {
         </Text>
         <Text className="text-gray-900 font-semibold text-base mb-10">{email}</Text>
 
-        <View className="flex-row gap-2 mb-4">
+        <View className="flex-row gap-1.5 mb-4 justify-center">
           {otp.map((digit, i) => (
             <TextInput
               key={i}
               ref={(ref) => { inputRefs.current[i] = ref; }}
-              className={`flex-1 aspect-square border-2 rounded-2xl text-center text-2xl font-bold
+              style={{ width: 36, height: 48 }}
+              className={`border-2 rounded-xl text-center text-lg font-bold
                 ${error ? 'border-red-400 bg-red-50' : digit ? 'border-brand-600 bg-brand-50' : 'border-gray-200'}`}
               keyboardType="numeric"
               maxLength={i === 0 ? OTP_LENGTH : 1}
