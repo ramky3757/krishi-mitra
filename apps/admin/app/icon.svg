@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="14" fill="#1a6b3c"/>
+  <!-- Wheat stalk -->
+  <g stroke="#fbbf24" stroke-width="2.5" stroke-linecap="round" fill="none">
+    <!-- Center stem -->
+    <line x1="32" y1="20" x2="32" y2="52"/>
+    <!-- Left leaves -->
+    <path d="M 32 26 Q 24 26 22 32"/>
+    <path d="M 32 34 Q 24 34 22 40"/>
+    <path d="M 32 42 Q 24 42 22 48"/>
+    <!-- Right leaves -->
+    <path d="M 32 26 Q 40 26 42 32"/>
+    <path d="M 32 34 Q 40 34 42 40"/>
+    <path d="M 32 42 Q 40 42 42 48"/>
+  </g>
+  <!-- Wheat head -->
+  <ellipse cx="32" cy="18" rx="5" ry="8" fill="#fbbf24"/>
+</svg>
