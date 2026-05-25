@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { View, Text, TextInput, Pressable, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
 import { useAuthStore } from '@/stores/authStore';
+import { supabase } from '@/lib/supabase';
 
 export default function EmailScreen() {
   const [email, setEmail] = useState('');
@@ -73,6 +74,38 @@ export default function EmailScreen() {
               Send Code
             </Text>
           )}
+        </Pressable>
+
+        {/* Divider */}
+        <View className="flex-row items-center my-5">
+          <View className="flex-1 h-px bg-gray-200" />
+          <Text className="mx-3 text-gray-400 text-sm">or</Text>
+          <View className="flex-1 h-px bg-gray-200" />
+        </View>
+
+        {/* Google sign-in */}
+        <Pressable
+          onPress={async () => {
+            setError('');
+            try {
+              const redirectTo = typeof window !== 'undefined'
+                ? `${window.location.origin}/`
+                : 'krishimitra://';
+              const { error: oErr } = await supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: { redirectTo },
+              });
+              if (oErr) setError(oErr.message);
+            } catch (e: any) {
+              setError(e?.message ?? 'Google sign-in failed');
+            }
+          }}
+          className="rounded-2xl py-4 items-center border-2 border-gray-200 bg-white flex-row justify-center gap-3"
+        >
+          <Text className="text-lg">🔵</Text>
+          <Text className="text-base font-bold text-gray-800">
+            Continue with Google
+          </Text>
         </Pressable>
       </View>
     </KeyboardAvoidingView>
