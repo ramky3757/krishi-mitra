@@ -3,7 +3,7 @@ import { View, Text, TextInput, Pressable, KeyboardAvoidingView, Platform, Activ
 import { router, useLocalSearchParams } from 'expo-router';
 import { useAuthStore } from '@/stores/authStore';
 
-const OTP_LENGTH = 8;
+const OTP_LENGTH = 6;
 
 export default function OTPScreen() {
   const { email } = useLocalSearchParams<{ email: string }>();
