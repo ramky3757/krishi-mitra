@@ -30,16 +30,19 @@ export default function ConsumerKYCScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  // Pre-fill from existing profile
+  // Pre-fill from existing profile — fetch in parallel
   useEffect(() => {
     if (!user?.id) return;
     (async () => {
-      const { data: u } = await supabase.from('users').select('*').eq('id', user.id).single();
-      if (u) {
-        setFullName(u.full_name ?? '');
-        setPhone(u.phone ?? '');
+      const [uRes, cpRes] = await Promise.all([
+        supabase.from('users').select('*').eq('id', user.id).maybeSingle(),
+        supabase.from('consumer_profiles').select('*').eq('user_id', user.id).maybeSingle(),
+      ]);
+      if (uRes.data) {
+        setFullName(uRes.data.full_name ?? '');
+        setPhone(uRes.data.phone ?? '');
       }
-      const { data: cp } = await supabase.from('consumer_profiles').select('*').eq('user_id', user.id).maybeSingle();
+      const cp = cpRes.data;
       if (cp) {
         setProfession(cp.profession ?? '');
         setAddressLine(cp.address_line ?? '');
@@ -100,46 +103,50 @@ export default function ConsumerKYCScreen() {
     }
     setSubmitting(true);
     try {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (!authUser?.id) {
+      // Use cached session user — no extra round-trip
+      const userId = user?.id;
+      if (!userId) {
         setError('Session not found. Please sign in again.');
+        setSubmitting(false);
         return;
       }
-      const userId = authUser.id;
 
-      // Upload ID image if it's a local URI
+      // Upload ID image first (only if local); skip otherwise
       let idUrl = idImage;
       if (idImage && idImage.startsWith('file:')) {
         idUrl = await uploadIdImage(idImage);
       }
 
-      await supabase.from('users').upsert({
-        id: userId,
-        full_name: fullName.trim(),
-        phone: phone.trim(),
-      });
+      // Both upserts in parallel
+      const [userRes, cpRes] = await Promise.all([
+        supabase.from('users').upsert({
+          id: userId,
+          full_name: fullName.trim(),
+          phone: phone.trim(),
+        }),
+        supabase.from('consumer_profiles').upsert({
+          user_id: userId,
+          profession: profession.trim() || null,
+          address_line: addressLine.trim(),
+          city: city.trim(),
+          district: district.trim() || null,
+          state: state.trim(),
+          pincode: pincode.trim(),
+          government_id_type: idType,
+          government_id_number: idNumber.trim(),
+          government_id_url: idUrl,
+          kyc_status: 'pending',
+          kyc_submitted_at: new Date().toISOString(),
+        }),
+      ]);
+      if (userRes.error) throw userRes.error;
+      if (cpRes.error) throw cpRes.error;
 
-      const { error: cpErr } = await supabase.from('consumer_profiles').upsert({
-        user_id: userId,
-        profession: profession.trim() || null,
-        address_line: addressLine.trim(),
-        city: city.trim(),
-        district: district.trim() || null,
-        state: state.trim(),
-        pincode: pincode.trim(),
-        government_id_type: idType,
-        government_id_number: idNumber.trim(),
-        government_id_url: idUrl,
-        kyc_status: 'pending',
-        kyc_submitted_at: new Date().toISOString(),
-      });
-      if (cpErr) throw cpErr;
-
-      await refreshProfile();
+      // Navigate immediately; refresh in background so user doesn't wait
       router.replace('/(consumer)/home');
+      void refreshProfile();
     } catch (e: any) {
       setError(e?.message ?? 'Failed to submit KYC');
-    } finally {
       setSubmitting(false);
     }
   };

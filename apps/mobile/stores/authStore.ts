@@ -63,8 +63,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({ isLoading: false });
       throw error;
     }
+    // Set session immediately; profile loads in parallel below
     set({ session: data.session, isLoading: false });
-    await get().refreshProfile();
+    // Don't await — let the caller navigate; profile populates in background
+    void get().refreshProfile();
   },
 
   signInWithPassword: async (email: string, password: string) => {
@@ -93,17 +95,23 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   refreshProfile: async () => {
-    const { data: { user: authUser } } = await supabase.auth.getUser();
+    // Use session user from store if available — skips a server round-trip
+    const sessionUser = get().session?.user;
+    let authUser = sessionUser;
+    if (!authUser) {
+      const { data } = await supabase.auth.getUser();
+      authUser = data.user ?? undefined;
+    }
     if (!authUser) return;
 
-    let { data: userData } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', authUser.id)
-      .single();
+    // Fetch user + both profile types in parallel — single round-trip
+    const [userRes, farmerRes, consumerRes] = await Promise.all([
+      supabase.from('users').select('*').eq('id', authUser.id).maybeSingle(),
+      supabase.from('farmer_profiles').select('*').eq('user_id', authUser.id).maybeSingle(),
+      supabase.from('consumer_profiles').select('*').eq('user_id', authUser.id).maybeSingle(),
+    ]);
 
-    // If no public.users row exists (e.g. account created directly in Supabase
-    // dashboard without going through the app's OTP trigger), create it now.
+    let userData = userRes.data;
     if (!userData) {
       const { data: created } = await supabase
         .from('users')
@@ -111,30 +119,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           id: authUser.id,
           email: authUser.email ?? null,
           phone: authUser.phone ?? null,
-          full_name: authUser.user_metadata?.full_name ?? '',
+          full_name: (authUser as any).user_metadata?.full_name ?? '',
         })
         .select('*')
-        .single();
+        .maybeSingle();
       userData = created;
     }
 
     if (!userData) return;
-    set({ user: userData });
-
-    if (userData.role === 'farmer') {
-      const { data: fp } = await supabase
-        .from('farmer_profiles')
-        .select('*')
-        .eq('user_id', authUser.id)
-        .single();
-      set({ farmerProfile: fp });
-    } else if (userData.role === 'consumer') {
-      const { data: cp } = await supabase
-        .from('consumer_profiles')
-        .select('*')
-        .eq('user_id', authUser.id)
-        .single();
-      set({ consumerProfile: cp });
-    }
+    set({
+      user: userData,
+      farmerProfile: farmerRes.data ?? null,
+      consumerProfile: consumerRes.data ?? null,
+    });
   },
 }));
