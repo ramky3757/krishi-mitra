@@ -32,6 +32,9 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     storage: ExpoSecureStoreAdapter as any,
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: false,
+    // Web needs this to capture OAuth tokens from the URL hash after redirect.
+    // Native uses deep linking instead, so it stays off there.
+    detectSessionInUrl: Platform.OS === 'web',
+    flowType: 'pkce',
   },
 });
