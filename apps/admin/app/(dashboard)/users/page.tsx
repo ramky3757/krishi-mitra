@@ -23,22 +23,22 @@ export default async function UsersPage() {
   const users = await getUsers();
 
   return (
-    <div className="p-8">
-      <div className="mb-6 flex items-center justify-between">
+    <div className="p-4 md:p-8">
+      <div className="mb-6 flex items-center justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Users</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-gray-900">Users</h1>
           <p className="text-gray-500 text-sm mt-1">{users.length} registered users</p>
         </div>
         <Link
           href="/users/new"
-          className="bg-brand-700 hover:bg-brand-800 text-white font-semibold px-4 py-2.5 rounded-xl text-sm transition-colors"
+          className="bg-brand-700 hover:bg-brand-800 text-white font-semibold px-4 py-2.5 rounded-xl text-sm transition-colors whitespace-nowrap"
         >
           + New User
         </Link>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="bg-white rounded-2xl shadow-sm overflow-x-auto">
+        <table className="w-full text-sm min-w-[700px]">
           <thead className="bg-gray-50 border-b border-gray-100">
             <tr>
               <th className="text-left px-5 py-3 text-gray-500 font-medium">Name</th>

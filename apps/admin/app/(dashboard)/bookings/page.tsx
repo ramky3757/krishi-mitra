@@ -27,13 +27,13 @@ export default async function BookingsPage() {
   const bookings = await getBookings();
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Bookings</h1>
         <p className="text-gray-500 text-sm mt-1">{bookings.length} total bookings</p>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-sm overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b border-gray-100">
             <tr>

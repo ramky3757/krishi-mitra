@@ -26,7 +26,7 @@ export default async function DashboardPage() {
   const stats = await getStats();
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       <h1 className="text-2xl font-bold text-gray-900 mb-2">Dashboard</h1>
       <p className="text-gray-500 mb-8">HarvestBond platform overview</p>
 
