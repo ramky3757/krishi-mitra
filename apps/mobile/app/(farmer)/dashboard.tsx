@@ -47,7 +47,7 @@ export default function FarmerDashboard() {
       const { data: bookings } = listingIds.length > 0
         ? await supabase
             .from('bookings')
-            .select('id, qty_kg, advance_amount, total_amount, status, created_at, consumer:users!consumer_id(full_name)')
+            .select('id, qty_kg, advance_amount, total_amount, farmer_payout, platform_fee_farmer, status, created_at, consumer:users!consumer_id(full_name)')
             .in('listing_id', listingIds)
             .order('created_at', { ascending: false })
             .limit(5)
@@ -61,10 +61,10 @@ export default function FarmerDashboard() {
       const advanceEarned = (bookings ?? [])
         .filter((b: any) => ['confirmed', 'in_progress', 'harvested', 'shipped', 'delivered'].includes(b.status))
         .reduce((sum: number, b: any) => sum + (b.advance_amount ?? 0), 0);
-      // Full payment received: shipped + delivered
+      // Net payout (after platform fee): shipped + delivered only
       const totalEarned = (bookings ?? [])
         .filter((b: any) => ['shipped', 'delivered'].includes(b.status))
-        .reduce((sum: number, b: any) => sum + (b.total_amount ?? 0), 0);
+        .reduce((sum: number, b: any) => sum + (b.farmer_payout ?? b.total_amount ?? 0), 0);
 
       const totalKgBooked = (bookings ?? []).reduce((sum: number, b: any) => sum + (b.qty_kg ?? 0), 0);
 

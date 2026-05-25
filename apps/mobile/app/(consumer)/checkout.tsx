@@ -4,8 +4,9 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useListingsStore } from '@/stores/listingsStore';
 import { useBookingsStore } from '@/stores/bookingsStore';
 import { useAuthStore } from '@/stores/authStore';
-import { formatCurrency, formatWeight, calculateAdvanceAmount, calculateFinalAmount } from '@/lib/formatters';
+import { formatCurrency, formatWeight } from '@/lib/formatters';
 import { ADVANCE_PERCENTAGE_OPTIONS } from '@/constants';
+import { computePriceBreakdown, getPlatformConfig, type PlatformConfig } from '@/lib/pricing';
 
 export default function CheckoutScreen() {
   const { listingId } = useLocalSearchParams<{ listingId: string }>();
@@ -25,10 +26,13 @@ export default function CheckoutScreen() {
   const [address, setAddress] = useState('');
   const [notes, setNotes] = useState('');
   const [advancePct, setAdvancePct] = useState(25);
+  const [deliveryMethod, setDeliveryMethod] = useState<'pickup' | 'delivery'>('delivery');
+  const [config, setConfig] = useState<PlatformConfig | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (listingId) fetchListingById(listingId);
+    getPlatformConfig().then(setConfig);
   }, [listingId]);
 
   const listing = selectedListing;
@@ -42,25 +46,54 @@ export default function CheckoutScreen() {
 
   const qtyNum = parseFloat(qty) || 0;
   const remainingQty = listing.available_qty_kg - (listing.booked_qty_kg ?? 0);
-  const totalAmount = qtyNum * listing.price_per_kg_final;
-  const advanceAmount = calculateAdvanceAmount(totalAmount, advancePct);
-  const finalAmount = calculateFinalAmount(totalAmount, advanceAmount);
 
-  const isValid = qtyNum >= 1 && qtyNum <= remainingQty && address.trim();
+  const breakdown = config
+    ? computePriceBreakdown({
+        qtyKg: qtyNum,
+        pricePerKg: listing.price_per_kg_final,
+        deliveryMethod,
+        config,
+        advancePct,
+      })
+    : null;
+
+  const advanceAmount = breakdown?.advanceAmount ?? 0;
+  const totalAmount = breakdown?.totalConsumerPays ?? 0;
+  const finalAmount = breakdown?.balanceAmount ?? 0;
+
+  const isValid =
+    qtyNum >= 1 &&
+    qtyNum <= remainingQty &&
+    (deliveryMethod === 'pickup' || address.trim().length > 0) &&
+    !!breakdown;
 
   const handleBook = async () => {
-    if (!isValid || isLoading) return;
+    if (!isValid || isLoading || !breakdown) return;
     setIsLoading(true);
     try {
       const booking = await createBooking({
         listing_id: listingId,
         qty_kg: qtyNum,
-        delivery_address: address,
+        delivery_address: deliveryMethod === 'pickup' ? '' : address,
         notes,
       });
 
-      // Simulate advance payment received (replace with Razorpay when ready)
       const { supabase } = await import('@/lib/supabase');
+
+      // Persist commission + delivery breakdown on the booking
+      await supabase.from('bookings').update({
+        delivery_method: deliveryMethod,
+        delivery_charge: breakdown.deliveryCharge,
+        subtotal: breakdown.subtotal,
+        platform_fee_farmer: breakdown.farmerFee,
+        platform_fee_consumer: breakdown.consumerFee,
+        farmer_payout: breakdown.farmerPayout,
+        total_consumer_pays: breakdown.totalConsumerPays,
+        advance_amount: breakdown.advanceAmount,
+        final_amount: breakdown.balanceAmount,
+      }).eq('id', booking.id);
+
+      // Simulate advance payment received (replace with Razorpay when ready)
       await supabase.from('payments').insert({
         booking_id: booking.id,
         type: 'advance',
@@ -148,17 +181,57 @@ export default function CheckoutScreen() {
             </View>
           </View>
 
-          {/* Delivery address */}
+          {/* Delivery method */}
           <View className="bg-white rounded-3xl p-5">
-            <Text className="font-bold text-gray-900 mb-3">Delivery Address *</Text>
-            <TextInput
-              className="border-2 border-gray-200 rounded-2xl px-4 py-3 text-gray-900 h-24"
-              placeholder="Enter your full delivery address"
-              multiline
-              value={address}
-              onChangeText={setAddress}
-            />
+            <Text className="font-bold text-gray-900 mb-3">How will you receive it?</Text>
+            <View className="gap-2">
+              <Pressable
+                onPress={() => setDeliveryMethod('pickup')}
+                className={`flex-row items-center gap-3 p-4 rounded-2xl border-2 ${deliveryMethod === 'pickup' ? 'border-brand-600 bg-brand-50' : 'border-gray-200'}`}
+              >
+                <Text className="text-2xl">🚜</Text>
+                <View className="flex-1">
+                  <Text className={`font-bold ${deliveryMethod === 'pickup' ? 'text-brand-700' : 'text-gray-900'}`}>
+                    Farm Pickup
+                  </Text>
+                  <Text className="text-gray-500 text-xs">
+                    Free · Visit the farm at harvest time
+                  </Text>
+                </View>
+                {deliveryMethod === 'pickup' && <Text className="text-brand-700 text-lg">✓</Text>}
+              </Pressable>
+
+              <Pressable
+                onPress={() => setDeliveryMethod('delivery')}
+                className={`flex-row items-center gap-3 p-4 rounded-2xl border-2 ${deliveryMethod === 'delivery' ? 'border-brand-600 bg-brand-50' : 'border-gray-200'}`}
+              >
+                <Text className="text-2xl">📦</Text>
+                <View className="flex-1">
+                  <Text className={`font-bold ${deliveryMethod === 'delivery' ? 'text-brand-700' : 'text-gray-900'}`}>
+                    Home Delivery
+                  </Text>
+                  <Text className="text-gray-500 text-xs">
+                    {config ? `₹${config.default_delivery_charge_per_kg}/kg · Delivered after harvest` : 'Calculating…'}
+                  </Text>
+                </View>
+                {deliveryMethod === 'delivery' && <Text className="text-brand-700 text-lg">✓</Text>}
+              </Pressable>
+            </View>
           </View>
+
+          {/* Delivery address — only when delivery selected */}
+          {deliveryMethod === 'delivery' && (
+            <View className="bg-white rounded-3xl p-5">
+              <Text className="font-bold text-gray-900 mb-3">Delivery Address *</Text>
+              <TextInput
+                className="border-2 border-gray-200 rounded-2xl px-4 py-3 text-gray-900 h-24"
+                placeholder="Enter your full delivery address"
+                multiline
+                value={address}
+                onChangeText={setAddress}
+              />
+            </View>
+          )}
 
           {/* Notes */}
           <View className="bg-white rounded-3xl p-5">
@@ -172,17 +245,23 @@ export default function CheckoutScreen() {
           </View>
 
           {/* Price breakdown */}
-          <View className="bg-brand-50 border border-brand-200 rounded-3xl p-5">
-            <Text className="font-bold text-gray-900 mb-4">Price Breakdown</Text>
-            <View className="gap-2">
-              <PriceRow label="Quantity" value={formatWeight(qtyNum)} />
-              <PriceRow label="Price per kg" value={formatCurrency(listing.price_per_kg_final)} />
-              <PriceRow label="Total crop value" value={formatCurrency(totalAmount)} bold />
-              <View className="h-px bg-brand-200 my-1" />
-              <PriceRow label={`Advance now (${advancePct}%)`} value={formatCurrency(advanceAmount)} highlight />
-              <PriceRow label="Remaining on delivery" value={formatCurrency(finalAmount)} />
+          {breakdown && (
+            <View className="bg-brand-50 border border-brand-200 rounded-3xl p-5">
+              <Text className="font-bold text-gray-900 mb-4">Price Breakdown</Text>
+              <View className="gap-2">
+                <PriceRow label={`${formatWeight(qtyNum)} × ${formatCurrency(listing.price_per_kg_final)}/kg`} value={formatCurrency(breakdown.subtotal)} />
+                {breakdown.deliveryCharge > 0 && (
+                  <PriceRow label="Delivery charge" value={formatCurrency(breakdown.deliveryCharge)} />
+                )}
+                <PriceRow label={`Platform fee (${config?.consumer_fee_pct ?? 3}%)`} value={formatCurrency(breakdown.consumerFee)} />
+                <View className="h-px bg-brand-200 my-1" />
+                <PriceRow label="Total" value={formatCurrency(breakdown.totalConsumerPays)} bold />
+                <View className="h-px bg-brand-200 my-1" />
+                <PriceRow label={`Pay now (${advancePct}% advance)`} value={formatCurrency(breakdown.advanceAmount)} highlight />
+                <PriceRow label={`Balance on ${deliveryMethod === 'pickup' ? 'pickup' : 'delivery'}`} value={formatCurrency(breakdown.balanceAmount)} />
+              </View>
             </View>
-          </View>
+          )}
 
           {/* Cancellation policy */}
           <View className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
