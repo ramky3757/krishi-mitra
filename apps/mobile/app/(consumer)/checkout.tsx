@@ -262,11 +262,16 @@ export default function CheckoutScreen() {
 
           {/* Cancellation policy */}
           <View className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
-            <Text className="font-semibold text-amber-800 mb-1">⚠️ Cancellation Policy</Text>
-            <Text className="text-amber-700 text-sm leading-5">
-              Cancellations before sowing: 100% advance refund.{'\n'}
-              After sowing and before harvest: 50% advance refund.{'\n'}
-              After harvest: No refund.
+            <Text className="font-semibold text-amber-800 mb-2">⚠️ Cancellation & Refund Policy</Text>
+            <View className="gap-1.5">
+              <PolicyRow stage="Within 48 hours of booking" refund="100%" />
+              <PolicyRow stage="After 48 hours, before sowing" refund="80%" />
+              <PolicyRow stage="After sowing, before flowering" refund="50%" />
+              <PolicyRow stage="After flowering, before harvest" refund="25%" />
+              <PolicyRow stage="After harvest" refund="0%" />
+            </View>
+            <Text className="text-amber-600 text-xs mt-2 italic">
+              Refunds protect both sides: lower percentages cover the farmer's investment in your crop.
             </Text>
           </View>
         </View>
@@ -300,6 +305,23 @@ function PriceRow({ label, value, bold, highlight }: { label: string; value: str
       </Text>
       <Text className={`font-semibold ${highlight ? 'text-brand-700 text-lg' : 'text-gray-900'} ${bold ? 'text-lg' : ''}`}>
         {value}
+      </Text>
+    </View>
+  );
+}
+
+function PolicyRow({ stage, refund }: { stage: string; refund: string }) {
+  const isFull = refund === '100%';
+  const isNone = refund === '0%';
+  return (
+    <View className="flex-row justify-between items-center">
+      <Text className="text-amber-800 text-sm flex-1 pr-2">{stage}</Text>
+      <Text
+        className={`text-sm font-bold ${
+          isFull ? 'text-green-700' : isNone ? 'text-red-600' : 'text-amber-700'
+        }`}
+      >
+        {refund}
       </Text>
     </View>
   );
