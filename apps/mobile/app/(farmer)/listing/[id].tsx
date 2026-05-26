@@ -6,6 +6,8 @@ import { supabase } from '@/lib/supabase';
 import { formatWeight, formatCurrency, formatDate } from '@/lib/formatters';
 import { CROP_MILESTONES } from '@/constants';
 import { CropMilestone } from '@/types';
+import CropStageCard from '@/components/CropStageCard';
+import { getPlatformConfig, type PlatformConfig, type CropStage } from '@/lib/pricing';
 
 export default function FarmerListingDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -16,6 +18,7 @@ export default function FarmerListingDetailScreen() {
   const [note, setNote] = useState('');
   const [photoUri, setPhotoUri] = useState('');
   const [isPosting, setIsPosting] = useState(false);
+  const [config, setConfig] = useState<PlatformConfig | null>(null);
 
   const loadListing = async () => {
     const { data } = await supabase
@@ -27,7 +30,10 @@ export default function FarmerListingDetailScreen() {
     setIsLoading(false);
   };
 
-  useEffect(() => { loadListing(); }, [id]);
+  useEffect(() => {
+    loadListing();
+    getPlatformConfig().then(setConfig);
+  }, [id]);
 
   const pickPhoto = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7 });
@@ -90,6 +96,15 @@ export default function FarmerListingDetailScreen() {
               (listing.bookings ?? []).reduce((s: number, b: any) => s + (b.advance_amount ?? 0), 0)
             )} />
           </View>
+
+          {/* Crop stage tracker */}
+          <CropStageCard
+            listingId={id as string}
+            currentStage={(listing.crop_stage ?? 'pre_sowing') as CropStage}
+            stageUpdatedAt={listing.stage_updated_at}
+            config={config}
+            onStageUpdated={loadListing}
+          />
 
           {/* Post progress update */}
           <Pressable
