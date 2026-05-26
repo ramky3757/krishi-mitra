@@ -6,6 +6,8 @@ import { useAuthStore } from '@/stores/authStore';
 import { formatCurrency, formatWeight, formatDate } from '@/lib/formatters';
 import { CROP_CATEGORIES } from '@/constants';
 import { CropListing } from '@/types';
+import { STAGE_LABELS, type CropStage } from '@/lib/pricing';
+import { daysToHarvest } from '@/components/DateField';
 
 const STATUS_LABELS: Record<string, { label: string; bg: string; text: string }> = {
   draft: { label: 'Draft', bg: 'bg-gray-100', text: 'text-gray-600' },
@@ -126,11 +128,26 @@ function FarmerListingCard({ listing, onPress }: { listing: CropListing; onPress
         </View>
       </View>
 
-      <View className="flex-row gap-4 mb-3">
+      <View className="flex-row gap-2 mb-3 flex-wrap">
         <InfoPill icon="⚖️" text={`${formatWeight(listing.available_qty_kg)} available`} />
         <InfoPill icon="💰" text={`${formatCurrency(listing.price_per_kg_final)}/kg`} />
-        <InfoPill icon="🗓️" text={formatDate(listing.harvest_date)} />
+        <InfoPill icon="🗓️" text={daysToHarvest(listing.harvest_date) ?? formatDate(listing.harvest_date)} />
       </View>
+
+      {/* Crop stage badge */}
+      {(() => {
+        const stage = ((listing as any).crop_stage ?? 'pre_sowing') as CropStage;
+        const info = STAGE_LABELS[stage];
+        return (
+          <View className="bg-brand-50 rounded-xl px-3 py-2 mb-3 flex-row items-center gap-2">
+            <Text className="text-base">{info.emoji}</Text>
+            <Text className="text-brand-700 font-semibold text-xs flex-1">
+              Stage: {info.label}
+            </Text>
+            <Text className="text-brand-600 text-xs">Tap to update →</Text>
+          </View>
+        );
+      })()}
 
       {/* Booking progress */}
       <View>

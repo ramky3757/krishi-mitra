@@ -3,6 +3,7 @@ import { View, Text, ScrollView, Pressable, TextInput, Switch, ActivityIndicator
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { Snackbar } from 'react-native-paper';
+import DateField, { daysToHarvest } from '@/components/DateField';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import { CROP_CATEGORIES, FARMING_METHODS } from '@/constants';
@@ -72,14 +73,17 @@ export default function CreateListingScreen() {
   const handleSubmit = async () => {
     setIsLoading(true);
     try {
-      // Upload photos
-      const mediaUrls: string[] = [];
-      for (const uri of form.photos) {
-        const blob = await (await fetch(uri)).blob();
-        const filename = `${user?.id}/${Date.now()}.jpg`;
-        const { data: up } = await supabase.storage.from('listing-media').upload(filename, blob);
-        if (up) mediaUrls.push(up.path);
-      }
+      // Upload photos in parallel (was sequential — slow when 3+ photos)
+      const uploadOne = async (uri: string, idx: number): Promise<string | null> => {
+        try {
+          const blob = await (await fetch(uri)).blob();
+          const filename = `${user?.id}/${Date.now()}-${idx}.jpg`;
+          const { data: up } = await supabase.storage.from('listing-media').upload(filename, blob);
+          return up?.path ?? null;
+        } catch { return null; }
+      };
+      const uploadResults = await Promise.all(form.photos.map(uploadOne));
+      const mediaUrls = uploadResults.filter((u): u is string => !!u);
 
       // Create listing
       const { data: listing, error } = await supabase.from('crop_listings').insert({
@@ -111,15 +115,14 @@ export default function CreateListingScreen() {
 
       if (error) throw error;
 
-      // Insert media records
+      // Navigate immediately so user feels responsiveness; media inserts in background
+      setToast('Listing submitted! Pending admin approval.');
+      router.replace('/(farmer)/listings');
       if (mediaUrls.length > 0) {
-        await supabase.from('listing_media').insert(
+        void supabase.from('listing_media').insert(
           mediaUrls.map((url) => ({ listing_id: listing.id, url, type: 'photo' }))
         );
       }
-
-      setToast('Listing submitted! Pending admin approval.');
-      setTimeout(() => router.replace('/(farmer)/listings'), 1200);
     } catch (e: any) {
       setToast(e.message ?? 'Failed to create listing');
     } finally {
@@ -177,7 +180,7 @@ export default function CreateListingScreen() {
         <Text className="text-gray-500 text-xs mt-1.5">Step {step + 1} of {STEPS.length}: {STEPS[step]}</Text>
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 120 }}>
+      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 200 }}>
         {step === 0 && <Step0 form={form} update={update} />}
         {step === 1 && <Step1 form={form} update={update} />}
         {step === 2 && <Step2 form={form} update={update} />}
@@ -248,8 +251,21 @@ function Step0({ form, update }: any) {
 
       <LabeledInput label="Crop Name *" placeholder="e.g. Sona Masuri Rice" value={form.cropName} onChange={(v: string) => update('cropName', v)} />
       <LabeledInput label="Variety (optional)" placeholder="e.g. Basmati, HMT..." value={form.cropVariety} onChange={(v: string) => update('cropVariety', v)} />
-      <LabeledInput label="Sowing Date *" placeholder="YYYY-MM-DD" value={form.sowingDate} onChange={(v: string) => update('sowingDate', v)} />
-      <LabeledInput label="Expected Harvest Date *" placeholder="YYYY-MM-DD" value={form.harvestDate} onChange={(v: string) => update('harvestDate', v)} />
+      <DateField
+        label="Sowing Date"
+        required
+        value={form.sowingDate}
+        onChange={(v: string) => update('sowingDate', v)}
+        max={form.harvestDate || undefined}
+      />
+      <DateField
+        label="Expected Harvest Date"
+        required
+        value={form.harvestDate}
+        onChange={(v: string) => update('harvestDate', v)}
+        min={form.sowingDate || new Date().toISOString().slice(0, 10)}
+        helper={daysToHarvest(form.harvestDate) ?? undefined}
+      />
     </View>
   );
 }

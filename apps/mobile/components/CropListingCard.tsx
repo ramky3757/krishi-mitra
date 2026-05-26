@@ -2,6 +2,7 @@ import { View, Text, Pressable, Image } from 'react-native';
 import { CropListing } from '@/types';
 import { formatCurrency, formatWeight, formatRelativeDate } from '@/lib/formatters';
 import { CROP_CATEGORIES, FARMING_METHODS, VERIFICATION_BADGES } from '@/constants';
+import { daysToHarvest } from '@/components/DateField';
 
 interface Props {
   listing: CropListing;
@@ -77,7 +78,7 @@ export function CropListingCard({ listing, onPress, compact = false }: Props) {
         {/* Stats row */}
         <View className="flex-row gap-3 mb-3">
           <StatChip icon="⚖️" label={formatWeight(listing.available_qty_kg)} />
-          <StatChip icon="🗓️" label={`Harvest: ${formatRelativeDate(listing.harvest_date)}`} />
+          <StatChip icon="🗓️" label={daysToHarvest(listing.harvest_date) ?? `Harvest: ${formatRelativeDate(listing.harvest_date)}`} />
           <StatChip icon="🌿" label={method?.label ?? listing.farming_method} />
         </View>
 

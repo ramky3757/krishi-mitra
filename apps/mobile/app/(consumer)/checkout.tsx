@@ -122,7 +122,7 @@ export default function CheckoutScreen() {
 
   return (
     <View className="flex-1 bg-gray-50">
-      <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 200 }}>
         {/* Header */}
         <View className="bg-white px-5 pt-14 pb-5 border-b border-gray-100">
           <Pressable onPress={() => router.back()} className="mb-4">
