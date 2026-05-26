@@ -80,7 +80,7 @@ export default function FarmerListingsScreen() {
         contentContainerStyle={{ padding: 16 }}
         refreshing={isLoading}
         onRefresh={loadListings}
-        renderItem={({ item }) => <FarmerListingCard listing={item} onPress={() => router.push(`/(farmer)/listing/${item.id}`)} />}
+        renderItem={({ item }) => <FarmerListingCard listing={item} onPress={() => router.push(`/(farmer)/my-crop/${item.id}`)} />}
         ListEmptyComponent={
           !isLoading ? (
             <View className="items-center py-16">

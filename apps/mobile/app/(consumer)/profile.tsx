@@ -25,7 +25,10 @@ export default function ConsumerProfileScreen() {
             <Text className="text-4xl">👤</Text>
           </View>
           <Text className="text-white text-xl font-bold">{user?.full_name}</Text>
-          <Text className="text-brand-300 mt-0.5">{user?.email ?? user?.phone}</Text>
+          <View className="bg-white/15 rounded-full px-3 py-1 mt-1.5">
+            <Text className="text-white text-xs font-bold">🛒 Consumer Account</Text>
+          </View>
+          <Text className="text-brand-300 mt-2">{user?.email ?? user?.phone}</Text>
           {consumerProfile?.state && (
             <Text className="text-brand-300 text-sm mt-1">
               📍 {consumerProfile.district ? `${consumerProfile.district}, ` : ''}{consumerProfile.state}

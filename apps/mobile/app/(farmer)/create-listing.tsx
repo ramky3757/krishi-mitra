@@ -15,9 +15,7 @@ interface ListingForm {
   farmSizeAcres: string;
   totalYieldKg: string;
   availableQtyKg: string;
-  pricePerKgAdvance: string;
   pricePerKgFinal: string;
-  advancePercentage: string;
   sowingDate: string;
   harvestDate: string;
   farmingMethod: FarmingMethod | '';
@@ -43,9 +41,7 @@ export default function CreateListingScreen() {
     farmSizeAcres: '',
     totalYieldKg: '',
     availableQtyKg: '',
-    pricePerKgAdvance: '',
     pricePerKgFinal: '',
-    advancePercentage: '25',
     sowingDate: '',
     harvestDate: '',
     farmingMethod: '',
@@ -95,9 +91,8 @@ export default function CreateListingScreen() {
         total_yield_kg: parseFloat(form.totalYieldKg),
         available_qty_kg: parseFloat(form.availableQtyKg),
         booked_qty_kg: 0,
-        price_per_kg_advance: parseFloat(form.pricePerKgAdvance),
+        price_per_kg_advance: parseFloat(form.pricePerKgFinal),
         price_per_kg_final: parseFloat(form.pricePerKgFinal),
-        advance_percentage: parseFloat(form.advancePercentage),
         sowing_date: form.sowingDate,
         harvest_date: form.harvestDate,
         farming_method: form.farmingMethod,
@@ -152,7 +147,6 @@ export default function CreateListingScreen() {
       !isPositiveNumber(form.totalYieldKg) && 'Total Yield (kg)',
       !isPositiveNumber(form.availableQtyKg) && 'Available Quantity (kg)',
       !isPositiveNumber(form.pricePerKgFinal) && 'Final Price (₹/kg)',
-      !isPositiveNumber(form.pricePerKgAdvance) && 'Advance Price (₹/kg)',
     ].filter(Boolean) as string[],
     2: [
       !isPositiveNumber(form.farmSizeAcres) && 'Farm Size (acres)',
@@ -269,27 +263,13 @@ function Step1({ form, update }: any) {
       <LabeledInput label="Quantity Available to Pre-sell (kg) *" placeholder="e.g. 500" value={form.availableQtyKg} onChange={(v: string) => update('availableQtyKg', v)} keyboardType="numeric" />
 
       <View className="bg-brand-50 rounded-2xl p-4">
-        <Text className="font-semibold text-brand-800 mb-1">💡 Pricing Tip</Text>
-        <Text className="text-brand-700 text-sm">Set a lower advance price to attract buyers, and the full price on delivery. Consumers pay 25–30% upfront.</Text>
+        <Text className="font-semibold text-brand-800 mb-1">💡 Pricing</Text>
+        <Text className="text-brand-700 text-sm">
+          Set your final price per kg. Krishi Mitra charges consumers a stage-based advance (20–100%) depending on how close to harvest the booking is made. You'll receive your payout in milestones as the crop progresses.
+        </Text>
       </View>
 
-      <LabeledInput label="Final Price per kg (₹) *" placeholder="Price on delivery" value={form.pricePerKgFinal} onChange={(v: string) => update('pricePerKgFinal', v)} keyboardType="numeric" />
-      <LabeledInput label="Advance Price per kg (₹) *" placeholder="Price collected upfront" value={form.pricePerKgAdvance} onChange={(v: string) => update('pricePerKgAdvance', v)} keyboardType="numeric" />
-
-      <View>
-        <Label>Advance % from consumer</Label>
-        <View className="flex-row gap-3">
-          {['25', '30'].map((pct) => (
-            <Pressable
-              key={pct}
-              onPress={() => update('advancePercentage', pct)}
-              className={`flex-1 py-3 rounded-2xl border-2 items-center ${form.advancePercentage === pct ? 'border-brand-600 bg-brand-50' : 'border-gray-200'}`}
-            >
-              <Text className={`font-bold ${form.advancePercentage === pct ? 'text-brand-700' : 'text-gray-500'}`}>{pct}%</Text>
-            </Pressable>
-          ))}
-        </View>
-      </View>
+      <LabeledInput label="Final Price per kg (₹) *" placeholder="Your selling price per kg" value={form.pricePerKgFinal} onChange={(v: string) => update('pricePerKgFinal', v)} keyboardType="numeric" />
     </View>
   );
 }
@@ -396,8 +376,7 @@ function Step4({ form }: any) {
         <ReviewRow label="Category" value={category?.label ?? ''} />
         <ReviewRow label="Total Yield" value={`${form.totalYieldKg} kg`} />
         <ReviewRow label="Available to sell" value={`${form.availableQtyKg} kg`} />
-        <ReviewRow label="Final Price" value={`₹${form.pricePerKgFinal}/kg`} />
-        <ReviewRow label="Advance Price" value={`₹${form.pricePerKgAdvance}/kg (${form.advancePercentage}%)`} />
+        <ReviewRow label="Price per kg" value={`₹${form.pricePerKgFinal}/kg`} />
         <ReviewRow label="Sowing Date" value={form.sowingDate} />
         <ReviewRow label="Harvest Date" value={form.harvestDate} />
         <ReviewRow label="Farm Size" value={`${form.farmSizeAcres} acres`} />

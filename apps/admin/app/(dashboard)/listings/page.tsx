@@ -6,7 +6,7 @@ import { ListingApprovalActions } from '@/components/ListingApprovalActions';
 async function getPendingListings() {
   const { data } = await supabase
     .from('crop_listings')
-    .select('*, farmer:farmer_profiles(*, user:users(*)), media:listing_media(*)')
+    .select('*, farmer:users!farmer_id(*, farmer_profile:farmer_profiles(*)), media:listing_media(*)')
     .eq('status', 'pending_approval')
     .order('created_at', { ascending: true });
   return data ?? [];
@@ -32,7 +32,7 @@ export default async function ListingsPage() {
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <h3 className="font-bold text-gray-900 text-lg">{listing.crop_name}</h3>
-                  <p className="text-gray-500 text-sm">by {listing.farmer?.user?.full_name} · {listing.district}, {listing.state}</p>
+                  <p className="text-gray-500 text-sm">by {listing.farmer?.full_name ?? listing.farmer?.email ?? '—'} · {listing.location_district ?? listing.district}, {listing.location_state ?? listing.state}</p>
                 </div>
                 <span className="bg-amber-100 text-amber-700 text-sm font-semibold px-3 py-1 rounded-full">Pending Approval</span>
               </div>
