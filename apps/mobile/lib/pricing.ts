@@ -1,10 +1,17 @@
 import { supabase } from './supabase';
 
+export type CropStage = 'pre_sowing' | 'sowed' | 'growing' | 'pre_harvest' | 'ready_now';
+
 export type PlatformConfig = {
   farmer_fee_pct: number;
   consumer_fee_pct: number;
   default_delivery_charge_per_kg: number;
   free_pickup_enabled: boolean;
+  advance_pct_pre_sowing: number;
+  advance_pct_sowed: number;
+  advance_pct_growing: number;
+  advance_pct_pre_harvest: number;
+  advance_pct_ready_now: number;
 };
 
 const DEFAULT_CONFIG: PlatformConfig = {
@@ -12,6 +19,31 @@ const DEFAULT_CONFIG: PlatformConfig = {
   consumer_fee_pct: 3,
   default_delivery_charge_per_kg: 15,
   free_pickup_enabled: true,
+  advance_pct_pre_sowing: 20,
+  advance_pct_sowed: 30,
+  advance_pct_growing: 40,
+  advance_pct_pre_harvest: 60,
+  advance_pct_ready_now: 100,
+};
+
+export function advancePctForStage(stage: CropStage | null | undefined, config: PlatformConfig): number {
+  switch (stage) {
+    case 'sowed': return config.advance_pct_sowed;
+    case 'growing': return config.advance_pct_growing;
+    case 'pre_harvest': return config.advance_pct_pre_harvest;
+    case 'ready_now': return config.advance_pct_ready_now;
+    case 'pre_sowing':
+    default:
+      return config.advance_pct_pre_sowing;
+  }
+}
+
+export const STAGE_LABELS: Record<CropStage, { label: string; emoji: string; description: string }> = {
+  pre_sowing:  { emoji: '🌱', label: 'Pre-sowing',  description: 'Crop is planned, not yet sown' },
+  sowed:       { emoji: '🌾', label: 'Sowed',       description: 'Seeds in the ground' },
+  growing:     { emoji: '🌿', label: 'Growing',     description: 'Crop actively growing' },
+  pre_harvest: { emoji: '🌸', label: 'Pre-harvest', description: 'Flowering / nearing harvest' },
+  ready_now:   { emoji: '✅', label: 'Ready Now',   description: 'Harvested, ready to deliver' },
 };
 
 let cachedConfig: PlatformConfig | null = null;
@@ -20,10 +52,10 @@ export async function getPlatformConfig(): Promise<PlatformConfig> {
   if (cachedConfig) return cachedConfig;
   const { data } = await supabase
     .from('platform_config')
-    .select('farmer_fee_pct, consumer_fee_pct, default_delivery_charge_per_kg, free_pickup_enabled')
+    .select('*')
     .eq('id', 1)
     .maybeSingle();
-  cachedConfig = (data as PlatformConfig) ?? DEFAULT_CONFIG;
+  cachedConfig = { ...DEFAULT_CONFIG, ...(data as Partial<PlatformConfig> | null) };
   return cachedConfig;
 }
 

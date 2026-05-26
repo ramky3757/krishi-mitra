@@ -5,9 +5,7 @@ import { useListingsStore } from '@/stores/listingsStore';
 import { useBookingsStore } from '@/stores/bookingsStore';
 import { useAuthStore } from '@/stores/authStore';
 import { formatCurrency, formatWeight } from '@/lib/formatters';
-import { computePriceBreakdown, getPlatformConfig, type PlatformConfig } from '@/lib/pricing';
-
-const ADVANCE_PCT = 30;
+import { computePriceBreakdown, getPlatformConfig, advancePctForStage, STAGE_LABELS, type PlatformConfig } from '@/lib/pricing';
 
 export default function CheckoutScreen() {
   const { listingId } = useLocalSearchParams<{ listingId: string }>();
@@ -47,13 +45,17 @@ export default function CheckoutScreen() {
   const qtyNum = parseFloat(qty) || 0;
   const remainingQty = listing.available_qty_kg - (listing.booked_qty_kg ?? 0);
 
+  const cropStage = (listing as any).crop_stage ?? 'pre_sowing';
+  const advancePct = config ? advancePctForStage(cropStage, config) : 30;
+  const stageInfo = STAGE_LABELS[cropStage as keyof typeof STAGE_LABELS] ?? STAGE_LABELS.pre_sowing;
+
   const breakdown = config
     ? computePriceBreakdown({
         qtyKg: qtyNum,
         pricePerKg: listing.price_per_kg_final,
         deliveryMethod,
         config,
-        advancePct: ADVANCE_PCT,
+        advancePct,
       })
     : null;
 
@@ -91,6 +93,8 @@ export default function CheckoutScreen() {
         total_consumer_pays: breakdown.totalConsumerPays,
         advance_amount: breakdown.advanceAmount,
         final_amount: breakdown.balanceAmount,
+        booked_at_stage: cropStage,
+        advance_pct_applied: advancePct,
       }).eq('id', booking.id);
 
       // Simulate advance payment received (replace with Razorpay when ready)
@@ -162,19 +166,30 @@ export default function CheckoutScreen() {
             )}
           </View>
 
-          {/* Advance payment info */}
+          {/* Crop stage + advance payment info */}
           {breakdown && (
-            <View className="bg-white rounded-3xl p-5 flex-row items-center gap-4">
-              <View className="w-14 h-14 rounded-2xl bg-brand-50 items-center justify-center">
-                <Text className="text-2xl">💰</Text>
+            <View className="bg-white rounded-3xl p-5 gap-3">
+              <View className="flex-row items-center gap-3 pb-3 border-b border-gray-100">
+                <Text className="text-2xl">{stageInfo.emoji}</Text>
+                <View className="flex-1">
+                  <Text className="font-bold text-gray-900">{stageInfo.label}</Text>
+                  <Text className="text-gray-500 text-xs">{stageInfo.description}</Text>
+                </View>
               </View>
-              <View className="flex-1">
-                <Text className="font-bold text-gray-900">{ADVANCE_PCT}% Advance Today</Text>
-                <Text className="text-gray-500 text-xs mt-0.5">
-                  Balance {formatCurrency(breakdown.balanceAmount)} due on {deliveryMethod === 'pickup' ? 'pickup' : 'delivery'}
-                </Text>
+              <View className="flex-row items-center gap-4">
+                <View className="w-12 h-12 rounded-2xl bg-brand-50 items-center justify-center">
+                  <Text className="text-xl">💰</Text>
+                </View>
+                <View className="flex-1">
+                  <Text className="font-bold text-gray-900">{advancePct}% Advance Today</Text>
+                  <Text className="text-gray-500 text-xs mt-0.5">
+                    {cropStage === 'ready_now'
+                      ? 'Full payment now, delivered in days'
+                      : `Balance ${formatCurrency(breakdown.balanceAmount)} due on ${deliveryMethod === 'pickup' ? 'pickup' : 'delivery'}`}
+                  </Text>
+                </View>
+                <Text className="font-bold text-brand-700 text-lg">{formatCurrency(breakdown.advanceAmount)}</Text>
               </View>
-              <Text className="font-bold text-brand-700 text-lg">{formatCurrency(breakdown.advanceAmount)}</Text>
             </View>
           )}
 
@@ -254,7 +269,7 @@ export default function CheckoutScreen() {
                 <View className="h-px bg-brand-200 my-1" />
                 <PriceRow label="Total" value={formatCurrency(breakdown.totalConsumerPays)} bold />
                 <View className="h-px bg-brand-200 my-1" />
-                <PriceRow label={`Pay now (${ADVANCE_PCT}% advance)`} value={formatCurrency(breakdown.advanceAmount)} highlight />
+                <PriceRow label={`Pay now (${advancePct}% advance)`} value={formatCurrency(breakdown.advanceAmount)} highlight />
                 <PriceRow label={`Balance on ${deliveryMethod === 'pickup' ? 'pickup' : 'delivery'}`} value={formatCurrency(breakdown.balanceAmount)} />
               </View>
             </View>
