@@ -174,7 +174,7 @@ export default function CheckoutScreen() {
                 >
                   <Text className={`font-bold text-lg ${advancePct === pct ? 'text-brand-700' : 'text-gray-500'}`}>{pct}%</Text>
                   <Text className={`text-xs mt-0.5 ${advancePct === pct ? 'text-brand-500' : 'text-gray-400'}`}>
-                    {formatCurrency(calculateAdvanceAmount(qtyNum * listing.price_per_kg_final, pct))}
+                    {formatCurrency(Math.ceil((breakdown?.totalConsumerPays ?? 0) * (pct / 100)))}
                   </Text>
                 </Pressable>
               ))}
