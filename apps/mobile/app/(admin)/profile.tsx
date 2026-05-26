@@ -9,15 +9,10 @@ export default function AdminProfileScreen() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
 
-  const doSignOut = async () => {
-    setSigningOut(true);
-    try {
-      await signOut();
-      setConfirmOpen(false);
-      router.replace('/(auth)/welcome');
-    } finally {
-      setSigningOut(false);
-    }
+  const doSignOut = () => {
+    setConfirmOpen(false);
+    router.replace('/(auth)/welcome');
+    void signOut();
   };
 
   return (

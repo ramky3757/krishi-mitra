@@ -9,15 +9,11 @@ export default function ConsumerProfileScreen() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
 
-  const doSignOut = async () => {
-    setSigningOut(true);
-    try {
-      await signOut();
-      setConfirmOpen(false);
-      router.replace('/(auth)/welcome');
-    } finally {
-      setSigningOut(false);
-    }
+  const doSignOut = () => {
+    setConfirmOpen(false);
+    router.replace('/(auth)/welcome');
+    // Fire-and-forget; state is cleared synchronously inside
+    void signOut();
   };
 
   return (

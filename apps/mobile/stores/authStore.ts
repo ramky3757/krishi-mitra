@@ -81,8 +81,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   signOut: async () => {
-    await supabase.auth.signOut();
+    // Clear local state first so UI updates instantly (<10ms)
     set({ session: null, user: null, farmerProfile: null, consumerProfile: null });
+    // Use 'local' scope: only clears stored tokens — no server round-trip.
+    // Fire-and-forget; user is already signed out from the UI's perspective.
+    void supabase.auth.signOut({ scope: 'local' });
   },
 
   updateProfile: async (data: Partial<User>) => {

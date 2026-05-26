@@ -6,7 +6,8 @@ import { createAuthClient } from '@/lib/supabase-auth';
 
 export async function signOut() {
   const client = await createAuthClient();
-  await client.auth.signOut();
+  // 'local' scope skips the server round-trip — only clears the cookie session.
+  await client.auth.signOut({ scope: 'local' });
   redirect('/login');
 }
 
