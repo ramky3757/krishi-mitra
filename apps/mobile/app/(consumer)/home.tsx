@@ -69,6 +69,25 @@ export default function HomeScreen() {
         </View>
       )}
 
+      {/* Trust strip */}
+      <View className="bg-white border-b border-gray-100 px-4 py-3 flex-row justify-around items-center">
+        <TrustItem icon="✅" label="Verified Farms" sub="ID & GPS checked" />
+        <View className="w-px h-8 bg-gray-100" />
+        <TrustItem icon="🌾" label="Direct from Farm" sub="No middlemen" />
+        <View className="w-px h-8 bg-gray-100" />
+        <TrustItem icon="🔒" label="100% Safe Pay" sub="Refund protected" />
+      </View>
+
+      {/* Why pre-book? */}
+      <View className="bg-brand-50 px-5 py-4 border-b border-brand-100">
+        <Text className="text-brand-800 font-bold text-sm mb-2">💡 Why pre-book?</Text>
+        <View className="gap-2">
+          <WhyRow icon="💰" text="Lower price than supermarkets — buy direct from the farmer" />
+          <WhyRow icon="🌱" text="Track your crop from seed to harvest with photo updates" />
+          <WhyRow icon="🚜" text="Visit the farm anytime, meet the farmer who grew your food" />
+        </View>
+      </View>
+
       {/* Category chips */}
       <ScrollView
         horizontal
@@ -142,6 +161,25 @@ function TrustPoint({ icon, text }: { icon: string; text: string }) {
     <View className="flex-row gap-2.5 items-start">
       <Text>{icon}</Text>
       <Text className="text-brand-800 text-sm flex-1">{text}</Text>
+    </View>
+  );
+}
+
+function TrustItem({ icon, label, sub }: { icon: string; label: string; sub: string }) {
+  return (
+    <View className="items-center flex-1">
+      <Text className="text-lg mb-0.5">{icon}</Text>
+      <Text className="text-gray-800 text-[11px] font-bold">{label}</Text>
+      <Text className="text-gray-400 text-[10px]">{sub}</Text>
+    </View>
+  );
+}
+
+function WhyRow({ icon, text }: { icon: string; text: string }) {
+  return (
+    <View className="flex-row items-start gap-2">
+      <Text className="text-sm">{icon}</Text>
+      <Text className="text-brand-700 text-xs flex-1 leading-5">{text}</Text>
     </View>
   );
 }

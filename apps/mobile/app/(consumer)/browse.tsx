@@ -35,7 +35,9 @@ export default function BrowseScreen() {
     setShowFilters(false);
   };
 
-  const filteredListings = search
+  const [quickFilter, setQuickFilter] = useState<'all' | 'organic' | 'soon' | 'ready' | 'wishlist'>('all');
+
+  let filteredListings = search
     ? listings.filter(
         (l) =>
           l.crop_name.toLowerCase().includes(search.toLowerCase()) ||
@@ -43,6 +45,30 @@ export default function BrowseScreen() {
           l.state.toLowerCase().includes(search.toLowerCase())
       )
     : listings;
+
+  // Apply quick filter
+  if (quickFilter === 'organic') {
+    filteredListings = filteredListings.filter((l) => l.farming_method === 'organic');
+  } else if (quickFilter === 'soon') {
+    filteredListings = filteredListings.filter((l) => {
+      if (!l.harvest_date) return false;
+      const days = Math.ceil((new Date(l.harvest_date).getTime() - Date.now()) / 86400000);
+      return days <= 30 && days >= 0;
+    });
+  } else if (quickFilter === 'ready') {
+    filteredListings = filteredListings.filter((l: any) => l.crop_stage === 'ready_now');
+  }
+
+  const counts = {
+    all: listings.length,
+    organic: listings.filter((l) => l.farming_method === 'organic').length,
+    soon: listings.filter((l) => {
+      if (!l.harvest_date) return false;
+      const days = Math.ceil((new Date(l.harvest_date).getTime() - Date.now()) / 86400000);
+      return days <= 30 && days >= 0;
+    }).length,
+    ready: listings.filter((l: any) => l.crop_stage === 'ready_now').length,
+  };
 
   return (
     <View className="flex-1 bg-gray-50">
@@ -111,6 +137,19 @@ export default function BrowseScreen() {
         </View>
       )}
 
+      {/* Quick filter chips with counts */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        className="bg-white border-b border-gray-100"
+        contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 10, gap: 8 }}
+      >
+        <QuickFilter active={quickFilter === 'all'} onPress={() => setQuickFilter('all')} label="All" count={counts.all} />
+        <QuickFilter active={quickFilter === 'ready'} onPress={() => setQuickFilter('ready')} label="✅ Ready Now" count={counts.ready} />
+        <QuickFilter active={quickFilter === 'soon'} onPress={() => setQuickFilter('soon')} label="⏳ Harvest <30d" count={counts.soon} />
+        <QuickFilter active={quickFilter === 'organic'} onPress={() => setQuickFilter('organic')} label="🌿 Organic" count={counts.organic} />
+      </ScrollView>
+
       {/* Results */}
       <FlatList
         data={filteredListings}
@@ -157,5 +196,21 @@ export default function BrowseScreen() {
         }
       />
     </View>
+  );
+}
+
+function QuickFilter({ active, onPress, label, count }: { active: boolean; onPress: () => void; label: string; count: number }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      className={`flex-row items-center gap-1.5 rounded-full px-3.5 py-2 border ${
+        active ? 'bg-brand-700 border-brand-700' : 'bg-white border-gray-200'
+      }`}
+    >
+      <Text className={`text-sm font-semibold ${active ? 'text-white' : 'text-gray-700'}`}>{label}</Text>
+      <View className={`rounded-full px-1.5 py-0 ${active ? 'bg-white/25' : 'bg-gray-100'}`}>
+        <Text className={`text-[10px] font-bold ${active ? 'text-white' : 'text-gray-600'}`}>{count}</Text>
+      </View>
+    </Pressable>
   );
 }
