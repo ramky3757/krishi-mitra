@@ -5,8 +5,9 @@ import { useListingsStore } from '@/stores/listingsStore';
 import { useBookingsStore } from '@/stores/bookingsStore';
 import { useAuthStore } from '@/stores/authStore';
 import { formatCurrency, formatWeight } from '@/lib/formatters';
-import { ADVANCE_PERCENTAGE_OPTIONS } from '@/constants';
 import { computePriceBreakdown, getPlatformConfig, type PlatformConfig } from '@/lib/pricing';
+
+const ADVANCE_PCT = 30;
 
 export default function CheckoutScreen() {
   const { listingId } = useLocalSearchParams<{ listingId: string }>();
@@ -25,7 +26,6 @@ export default function CheckoutScreen() {
   const [qty, setQty] = useState('10');
   const [address, setAddress] = useState('');
   const [notes, setNotes] = useState('');
-  const [advancePct, setAdvancePct] = useState(25);
   const [deliveryMethod, setDeliveryMethod] = useState<'pickup' | 'delivery'>('delivery');
   const [config, setConfig] = useState<PlatformConfig | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -53,7 +53,7 @@ export default function CheckoutScreen() {
         pricePerKg: listing.price_per_kg_final,
         deliveryMethod,
         config,
-        advancePct,
+        advancePct: ADVANCE_PCT,
       })
     : null;
 
@@ -162,24 +162,21 @@ export default function CheckoutScreen() {
             )}
           </View>
 
-          {/* Advance percentage */}
-          <View className="bg-white rounded-3xl p-5">
-            <Text className="font-bold text-gray-900 mb-3">Advance Payment</Text>
-            <View className="flex-row gap-3">
-              {ADVANCE_PERCENTAGE_OPTIONS.map((pct) => (
-                <Pressable
-                  key={pct}
-                  onPress={() => setAdvancePct(pct)}
-                  className={`flex-1 py-3 rounded-2xl items-center border-2 ${advancePct === pct ? 'border-brand-600 bg-brand-50' : 'border-gray-200'}`}
-                >
-                  <Text className={`font-bold text-lg ${advancePct === pct ? 'text-brand-700' : 'text-gray-500'}`}>{pct}%</Text>
-                  <Text className={`text-xs mt-0.5 ${advancePct === pct ? 'text-brand-500' : 'text-gray-400'}`}>
-                    {formatCurrency(Math.ceil((breakdown?.totalConsumerPays ?? 0) * (pct / 100)))}
-                  </Text>
-                </Pressable>
-              ))}
+          {/* Advance payment info */}
+          {breakdown && (
+            <View className="bg-white rounded-3xl p-5 flex-row items-center gap-4">
+              <View className="w-14 h-14 rounded-2xl bg-brand-50 items-center justify-center">
+                <Text className="text-2xl">💰</Text>
+              </View>
+              <View className="flex-1">
+                <Text className="font-bold text-gray-900">{ADVANCE_PCT}% Advance Today</Text>
+                <Text className="text-gray-500 text-xs mt-0.5">
+                  Balance {formatCurrency(breakdown.balanceAmount)} due on {deliveryMethod === 'pickup' ? 'pickup' : 'delivery'}
+                </Text>
+              </View>
+              <Text className="font-bold text-brand-700 text-lg">{formatCurrency(breakdown.advanceAmount)}</Text>
             </View>
-          </View>
+          )}
 
           {/* Delivery method */}
           <View className="bg-white rounded-3xl p-5">
@@ -257,7 +254,7 @@ export default function CheckoutScreen() {
                 <View className="h-px bg-brand-200 my-1" />
                 <PriceRow label="Total" value={formatCurrency(breakdown.totalConsumerPays)} bold />
                 <View className="h-px bg-brand-200 my-1" />
-                <PriceRow label={`Pay now (${advancePct}% advance)`} value={formatCurrency(breakdown.advanceAmount)} highlight />
+                <PriceRow label={`Pay now (${ADVANCE_PCT}% advance)`} value={formatCurrency(breakdown.advanceAmount)} highlight />
                 <PriceRow label={`Balance on ${deliveryMethod === 'pickup' ? 'pickup' : 'delivery'}`} value={formatCurrency(breakdown.balanceAmount)} />
               </View>
             </View>
