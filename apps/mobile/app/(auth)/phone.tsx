@@ -39,12 +39,10 @@ export default function LoginOptionsScreen() {
       setError('Please enter a valid email address');
       return;
     }
-    try {
-      await signInWithEmail(cleaned);
-      router.push({ pathname: '/(auth)/otp', params: { email: cleaned } });
-    } catch (e: any) {
-      setError(e.message ?? 'Failed to send code. Please try again.');
-    }
+    // Fire the SMTP send in background; navigate immediately so user isn't waiting.
+    // OTP screen has a 'Resend Code' button if the first send fails.
+    void signInWithEmail(cleaned).catch(() => {/* surface via resend button */});
+    router.push({ pathname: '/(auth)/otp', params: { email: cleaned } });
   };
 
   const handleGoogle = async () => {
