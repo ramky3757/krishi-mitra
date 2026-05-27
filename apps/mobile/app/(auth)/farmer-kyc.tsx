@@ -80,72 +80,61 @@ export default function FarmerKYCScreen() {
     setIsLoading(true);
     setSubmitError(null);
     try {
-      // Always get the auth user directly — don't rely on Zustand store hydration.
-      const { data: { user: authUser }, error: authErr } = await supabase.auth.getUser();
-      if (authErr || !authUser?.id) {
+      // Reuse cached session user — avoids a server round-trip
+      const userId = user?.id;
+      if (!userId) {
         setSubmitError('Session not found. Please sign out and sign in again.');
+        setIsLoading(false);
         return;
       }
-      const userId = authUser.id;
 
-      // Update user's name and phone in public.users (upsert so missing rows are created)
+      // Upload both documents in PARALLEL (was sequential)
+      const uploadDoc = async (uri: string | undefined, name: string): Promise<string> => {
+        if (!uri) return '';
+        try {
+          const blob = await (await fetch(uri)).blob();
+          const { data: up, error } = await supabase.storage
+            .from('kyc-docs')
+            .upload(`${userId}/${name}.jpg`, blob, { upsert: true });
+          return error ? '' : (up?.path ?? '');
+        } catch {
+          return '';
+        }
+      };
+      const [idDocUrl, landDocUrl] = await Promise.all([
+        uploadDoc(data.idDocUri, 'id_doc'),
+        uploadDoc(data.landDocUri, 'land_doc'),
+      ]);
+
+      // Run the user upsert + farmer_profile upsert in parallel
       const profileUpdates: Record<string, unknown> = { id: userId };
       if (data.fullName.trim()) profileUpdates.full_name = data.fullName.trim();
       if (data.phone.trim()) profileUpdates.phone = data.phone.trim();
-      await supabase.from('users').upsert(profileUpdates);
 
-      // Upload documents — treat upload failures as non-fatal (store path if succeeded)
-      let idDocUrl = '';
-      let landDocUrl = '';
+      const [userRes, profileRes] = await Promise.all([
+        supabase.from('users').upsert(profileUpdates),
+        supabase.from('farmer_profiles').upsert({
+          user_id: userId,
+          kyc_status: 'pending',
+          id_doc_url: idDocUrl || null,
+          land_doc_url: landDocUrl || null,
+          farm_geo_lat: data.geoLat,
+          farm_geo_lng: data.geoLng,
+          farm_address: data.farmAddress || null,
+          state: data.state,
+          district: data.district,
+          village: data.village || null,
+          verification_badges: [],
+        }),
+      ]);
+      if (userRes.error) throw userRes.error;
+      if (profileRes.error) throw profileRes.error;
 
-      if (data.idDocUri) {
-        try {
-          const blob = await (await fetch(data.idDocUri)).blob();
-          const { data: up, error: upErr } = await supabase.storage
-            .from('kyc-docs')
-            .upload(`${userId}/id_doc.jpg`, blob, { upsert: true });
-          if (!upErr) idDocUrl = up?.path ?? '';
-        } catch (_) {
-          // Storage upload failed — continue without the URL
-        }
-      }
-
-      if (data.landDocUri) {
-        try {
-          const blob = await (await fetch(data.landDocUri)).blob();
-          const { data: up, error: upErr } = await supabase.storage
-            .from('kyc-docs')
-            .upload(`${userId}/land_doc.jpg`, blob, { upsert: true });
-          if (!upErr) landDocUrl = up?.path ?? '';
-        } catch (_) {
-          // Storage upload failed — continue without the URL
-        }
-      }
-
-      // Upsert farmer profile
-      const { error: profileError } = await supabase.from('farmer_profiles').upsert({
-        user_id: userId,
-        kyc_status: 'pending',
-        id_doc_url: idDocUrl || null,
-        land_doc_url: landDocUrl || null,
-        farm_geo_lat: data.geoLat,
-        farm_geo_lng: data.geoLng,
-        farm_address: data.farmAddress || null,
-        state: data.state,
-        district: data.district,
-        village: data.village || null,
-        verification_badges: [],
-      });
-
-      if (profileError) {
-        throw new Error(profileError.message);
-      }
-
-      await refreshProfile();
+      // Navigate immediately — don't await profile refresh
       router.replace('/(farmer)/dashboard');
+      void refreshProfile();
     } catch (e: any) {
       setSubmitError(e.message ?? 'Failed to submit KYC. Please try again.');
-    } finally {
       setIsLoading(false);
     }
   };
