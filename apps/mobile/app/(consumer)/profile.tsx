@@ -51,8 +51,9 @@ export default function ConsumerProfileScreen() {
           </View>
 
           <View className="bg-white rounded-3xl overflow-hidden">
-            <MenuItem icon="📜" label="Terms of Service" onPress={() => {}} />
-            <MenuItem icon="🔒" label="Privacy Policy" onPress={() => {}} />
+            <MenuItem icon="📜" label="Terms of Service" onPress={() => router.push('/terms?only=common')} />
+            <MenuItem icon="🛒" label="Consumer Terms" onPress={() => router.push('/terms?only=consumer')} />
+            <MenuItem icon="🔒" label="Privacy Policy" onPress={() => router.push('/terms?only=privacy')} />
           </View>
 
           <Pressable

@@ -8,6 +8,8 @@ import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import { useDraft } from '@/lib/draftStorage';
 import DraftBanner from '@/components/DraftBanner';
+import TermsCheckbox from '@/components/TermsCheckbox';
+import { TERMS_VERSION } from '@/lib/terms';
 
 interface KYCData {
   fullName: string;
@@ -27,6 +29,8 @@ export default function FarmerKYCScreen() {
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   const draftKey = `farmer-kyc:${user?.id ?? 'anon'}`;
   const initialData: KYCData = {
@@ -116,6 +120,10 @@ export default function FarmerKYCScreen() {
       if (data.fullName.trim()) profileUpdates.full_name = data.fullName.trim();
       if (data.phone.trim()) profileUpdates.phone = data.phone.trim();
 
+      // Record terms acceptance on the user row
+      profileUpdates.terms_version = TERMS_VERSION;
+      profileUpdates.terms_accepted_at = new Date().toISOString();
+
       const [userRes, profileRes] = await Promise.all([
         supabase.from('users').upsert(profileUpdates),
         supabase.from('farmer_profiles').upsert({
@@ -173,7 +181,17 @@ export default function FarmerKYCScreen() {
 
         {step === 1 && <Step1 data={data} onChange={setData} onNext={() => setStep(2)} />}
         {step === 2 && <Step2 data={data} pickDocument={pickDocument} captureLocation={captureLocation} onBack={() => setStep(1)} onNext={() => setStep(3)} />}
-        {step === 3 && <Step3 data={data} isLoading={isLoading} error={submitError} onBack={() => setStep(2)} onSubmit={handleSubmit} />}
+        {step === 3 && (
+          <Step3
+            data={data}
+            isLoading={isLoading}
+            error={submitError}
+            onBack={() => setStep(2)}
+            onSubmit={handleSubmit}
+            termsAccepted={termsAccepted}
+            setTermsAccepted={setTermsAccepted}
+          />
+        )}
       </View>
     </ScrollView>
   );
@@ -254,7 +272,7 @@ function Step2({ data, pickDocument, captureLocation, onBack, onNext }: any) {
   );
 }
 
-function Step3({ data, isLoading, error, onBack, onSubmit }: any) {
+function Step3({ data, isLoading, error, onBack, onSubmit, termsAccepted, setTermsAccepted }: any) {
   return (
     <View className="flex-1">
       <Text className="text-2xl font-bold text-gray-900 mb-1">Review & Submit</Text>
@@ -281,13 +299,28 @@ function Step3({ data, isLoading, error, onBack, onSubmit }: any) {
         </Text>
       </View>
 
+      {/* Terms acceptance */}
+      <View className="mt-5">
+        <TermsCheckbox accepted={termsAccepted} onToggle={() => setTermsAccepted(!termsAccepted)} role="farmer" />
+      </View>
+
       <View className="flex-1" />
       <View className="flex-row gap-3 mt-8">
         <Pressable onPress={onBack} className="flex-1 border-2 border-gray-200 rounded-2xl py-4 items-center">
           <Text className="font-semibold text-gray-700">← Back</Text>
         </Pressable>
-        <Pressable onPress={onSubmit} disabled={isLoading} className="flex-2 flex-1 bg-brand-700 rounded-2xl py-4 items-center">
-          {isLoading ? <ActivityIndicator color="white" /> : <Text className="text-white font-bold">Submit KYC</Text>}
+        <Pressable
+          onPress={onSubmit}
+          disabled={isLoading || !termsAccepted}
+          className={`flex-2 flex-1 rounded-2xl py-4 items-center ${isLoading || !termsAccepted ? 'bg-gray-200' : 'bg-brand-700'}`}
+        >
+          {isLoading ? (
+            <ActivityIndicator color="white" />
+          ) : (
+            <Text className={`font-bold ${!termsAccepted ? 'text-gray-400' : 'text-white'}`}>
+              Submit KYC
+            </Text>
+          )}
         </Pressable>
       </View>
     </View>

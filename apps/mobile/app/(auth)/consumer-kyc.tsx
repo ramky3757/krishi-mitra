@@ -7,6 +7,8 @@ import PhoneField from '@/components/PhoneField';
 import { supabase } from '@/lib/supabase';
 import { useDraft } from '@/lib/draftStorage';
 import DraftBanner from '@/components/DraftBanner';
+import TermsCheckbox from '@/components/TermsCheckbox';
+import { TERMS_VERSION } from '@/lib/terms';
 
 const ID_TYPES = [
   { value: 'aadhaar', label: 'Aadhaar' },
@@ -68,6 +70,7 @@ export default function ConsumerKYCScreen() {
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   // Pre-fill from existing profile — but ONLY if draft hasn't already populated
   // these fields (don't overwrite the user's in-progress edits).
@@ -135,7 +138,8 @@ export default function ConsumerKYCScreen() {
     state.trim() &&
     pincode.trim() &&
     idType &&
-    idNumber.trim();
+    idNumber.trim() &&
+    termsAccepted;
 
   const handleSubmit = async () => {
     setError('');
@@ -165,6 +169,8 @@ export default function ConsumerKYCScreen() {
           id: userId,
           full_name: fullName.trim(),
           phone: phone.trim(),
+          terms_version: TERMS_VERSION,
+          terms_accepted_at: new Date().toISOString(),
         }),
         supabase.from('consumer_profiles').upsert({
           user_id: userId,
@@ -259,6 +265,11 @@ export default function ConsumerKYCScreen() {
             )}
           </Pressable>
         </Section>
+
+        {/* Terms acceptance */}
+        <View className="mt-2">
+          <TermsCheckbox accepted={termsAccepted} onToggle={() => setTermsAccepted(!termsAccepted)} role="consumer" />
+        </View>
 
         {error ? <Text className="text-red-500 text-sm mt-3">{error}</Text> : null}
 

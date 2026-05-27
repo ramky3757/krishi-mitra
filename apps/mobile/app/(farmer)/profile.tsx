@@ -79,8 +79,9 @@ export default function FarmerProfileScreen() {
         </View>
 
         <View className="bg-white rounded-3xl overflow-hidden">
-          <MenuItem icon="📜" label="Terms of Service" onPress={() => {}} />
-          <MenuItem icon="🔒" label="Privacy Policy" onPress={() => {}} />
+          <MenuItem icon="📜" label="Terms of Service" onPress={() => router.push('/terms?only=common')} />
+          <MenuItem icon="🧑‍🌾" label="Farmer Terms" onPress={() => router.push('/terms?only=farmer')} />
+          <MenuItem icon="🔒" label="Privacy Policy" onPress={() => router.push('/terms?only=privacy')} />
         </View>
 
         <Pressable onPress={() => setConfirmOpen(true)} className="bg-red-50 border border-red-200 rounded-2xl py-4 items-center">
