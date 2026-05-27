@@ -1,5 +1,6 @@
 import { Tabs } from 'expo-router';
 import { COLORS } from '@/constants';
+import RoleGuard from '@/components/RoleGuard';
 
 function TabIcon({ emoji, focused }: { emoji: string; focused: boolean }) {
   return <>{emoji}</>;
@@ -7,6 +8,7 @@ function TabIcon({ emoji, focused }: { emoji: string; focused: boolean }) {
 
 export default function FarmerLayout() {
   return (
+    <RoleGuard allow={['farmer']}>
     <Tabs
       screenOptions={{
         headerShown: false,
@@ -30,5 +32,6 @@ export default function FarmerLayout() {
       <Tabs.Screen name="my-crop/[id]" options={{ href: null }} />
       <Tabs.Screen name="order/[id]" options={{ href: null }} />
     </Tabs>
+    </RoleGuard>
   );
 }

@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router';
 import { Text } from 'react-native';
 import { COLORS } from '@/constants';
+import RoleGuard from '@/components/RoleGuard';
 
 function TabIcon({ emoji, label, focused }: { emoji: string; label: string; focused: boolean }) {
   return (
@@ -10,6 +11,7 @@ function TabIcon({ emoji, label, focused }: { emoji: string; label: string; focu
 
 export default function ConsumerLayout() {
   return (
+    <RoleGuard allow={['consumer']}>
     <Tabs
       screenOptions={{
         headerShown: false,
@@ -57,5 +59,6 @@ export default function ConsumerLayout() {
       <Tabs.Screen name="booking/[id]" options={{ href: null }} />
       <Tabs.Screen name="checkout" options={{ href: null }} />
     </Tabs>
+    </RoleGuard>
   );
 }

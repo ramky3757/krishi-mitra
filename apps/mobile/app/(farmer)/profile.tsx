@@ -26,7 +26,8 @@ export default function FarmerProfileScreen() {
         <View className="bg-white/15 rounded-full px-3 py-1 mt-1.5">
           <Text className="text-white text-xs font-bold">🧑‍🌾 Farmer Account</Text>
         </View>
-        <Text className="text-brand-300 mt-2">{user?.phone}</Text>
+        {user?.email && <Text className="text-brand-300 text-xs mt-2">{user.email}</Text>}
+        <Text className="text-brand-300 mt-1">{user?.phone}</Text>
         {farmerProfile?.state && (
           <Text className="text-brand-300 text-sm mt-1">
             📍 {farmerProfile.village ? `${farmerProfile.village}, ` : ''}{farmerProfile.district}, {farmerProfile.state}
