@@ -6,6 +6,8 @@ import { router } from 'expo-router';
 import PhoneField from '@/components/PhoneField';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
+import { useDraft } from '@/lib/draftStorage';
+import DraftBanner from '@/components/DraftBanner';
 
 interface KYCData {
   fullName: string;
@@ -25,7 +27,9 @@ export default function FarmerKYCScreen() {
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [data, setData] = useState<KYCData>({
+
+  const draftKey = `farmer-kyc:${user?.id ?? 'anon'}`;
+  const initialData: KYCData = {
     fullName: user?.full_name ?? '',
     phone: user?.phone ?? '',
     farmAddress: '',
@@ -36,7 +40,8 @@ export default function FarmerKYCScreen() {
     landDocUri: '',
     geoLat: null,
     geoLng: null,
-  });
+  };
+  const [data, setData, draft] = useDraft<KYCData>(draftKey, initialData);
 
   // Ensure profile is loaded and pre-fill known fields
   useEffect(() => {
@@ -130,6 +135,9 @@ export default function FarmerKYCScreen() {
       if (userRes.error) throw userRes.error;
       if (profileRes.error) throw profileRes.error;
 
+      // Wipe the draft now that submission succeeded
+      void draft.clear();
+
       // Navigate immediately — don't await profile refresh
       router.replace('/(farmer)/dashboard');
       void refreshProfile();
@@ -151,6 +159,17 @@ export default function FarmerKYCScreen() {
             />
           ))}
         </View>
+
+        {/* Auto-resume banner */}
+        <DraftBanner
+          show={draft.resume}
+          savedAt={draft.savedAt}
+          onStartOver={() => {
+            draft.clear();
+            setData(initialData);
+            setStep(1);
+          }}
+        />
 
         {step === 1 && <Step1 data={data} onChange={setData} onNext={() => setStep(2)} />}
         {step === 2 && <Step2 data={data} pickDocument={pickDocument} captureLocation={captureLocation} onBack={() => setStep(1)} onNext={() => setStep(3)} />}

@@ -4,6 +4,8 @@ import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { Snackbar } from 'react-native-paper';
 import DateField, { daysToHarvest } from '@/components/DateField';
+import { useDraft } from '@/lib/draftStorage';
+import DraftBanner from '@/components/DraftBanner';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import { CROP_CATEGORIES, FARMING_METHODS } from '@/constants';
@@ -35,7 +37,7 @@ export default function CreateListingScreen() {
   const [step, setStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
-  const [form, setForm] = useState<ListingForm>({
+  const INITIAL_FORM: ListingForm = {
     cropCategory: '',
     cropName: '',
     cropVariety: '',
@@ -52,7 +54,10 @@ export default function CreateListingScreen() {
     soilType: '',
     description: '',
     photos: [],
-  });
+  };
+
+  const draftKey = `create-listing:${user?.id ?? 'anon'}`;
+  const [form, setForm, draft] = useDraft<ListingForm>(draftKey, INITIAL_FORM);
 
   const update = (key: keyof ListingForm, value: any) =>
     setForm((f) => ({ ...f, [key]: value }));
@@ -114,6 +119,9 @@ export default function CreateListingScreen() {
       }).select().single();
 
       if (error) throw error;
+
+      // Wipe the saved draft now that submission succeeded
+      void draft.clear();
 
       // Navigate immediately so user feels responsiveness; media inserts in background
       setToast('Listing submitted! Pending admin approval.');
@@ -181,6 +189,16 @@ export default function CreateListingScreen() {
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 200 }}>
+        <DraftBanner
+          show={draft.resume}
+          savedAt={draft.savedAt}
+          onStartOver={() => {
+            draft.clear();
+            setForm(INITIAL_FORM);
+            setStep(0);
+          }}
+        />
+
         {step === 0 && <Step0 form={form} update={update} />}
         {step === 1 && <Step1 form={form} update={update} />}
         {step === 2 && <Step2 form={form} update={update} />}

@@ -5,6 +5,8 @@ import { router } from 'expo-router';
 import { useAuthStore } from '@/stores/authStore';
 import PhoneField from '@/components/PhoneField';
 import { supabase } from '@/lib/supabase';
+import { useDraft } from '@/lib/draftStorage';
+import DraftBanner from '@/components/DraftBanner';
 
 const ID_TYPES = [
   { value: 'aadhaar', label: 'Aadhaar' },
@@ -13,50 +15,89 @@ const ID_TYPES = [
   { value: 'passport', label: 'Passport' },
 ];
 
+type ConsumerKYCForm = {
+  fullName: string;
+  phone: string;
+  profession: string;
+  addressLine: string;
+  city: string;
+  district: string;
+  state: string;
+  pincode: string;
+  idType: string;
+  idNumber: string;
+  idImage: string | null;
+};
+
+const INITIAL_FORM: ConsumerKYCForm = {
+  fullName: '',
+  phone: '',
+  profession: '',
+  addressLine: '',
+  city: '',
+  district: '',
+  state: '',
+  pincode: '',
+  idType: 'aadhaar',
+  idNumber: '',
+  idImage: null,
+};
+
 export default function ConsumerKYCScreen() {
   const { user, refreshProfile } = useAuthStore();
 
-  const [fullName, setFullName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [profession, setProfession] = useState('');
-  const [addressLine, setAddressLine] = useState('');
-  const [city, setCity] = useState('');
-  const [district, setDistrict] = useState('');
-  const [state, setState] = useState('');
-  const [pincode, setPincode] = useState('');
-  const [idType, setIdType] = useState<string>('aadhaar');
-  const [idNumber, setIdNumber] = useState('');
-  const [idImage, setIdImage] = useState<string | null>(null);
+  const draftKey = `consumer-kyc:${user?.id ?? 'anon'}`;
+  const [form, setForm, draft] = useDraft<ConsumerKYCForm>(draftKey, INITIAL_FORM);
+
+  // Per-field setters that update the form object
+  const set = <K extends keyof ConsumerKYCForm>(key: K) =>
+    (value: ConsumerKYCForm[K]) => setForm((f) => ({ ...f, [key]: value }));
+
+  const { fullName, phone, profession, addressLine, city, district, state, pincode, idType, idNumber, idImage } = form;
+  const setFullName = set('fullName');
+  const setPhone = set('phone');
+  const setProfession = set('profession');
+  const setAddressLine = set('addressLine');
+  const setCity = set('city');
+  const setDistrict = set('district');
+  const setState = set('state');
+  const setPincode = set('pincode');
+  const setIdType = set('idType');
+  const setIdNumber = set('idNumber');
+  const setIdImage = (v: string | null) => setForm((f) => ({ ...f, idImage: v }));
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  // Pre-fill from existing profile — fetch in parallel
+  // Pre-fill from existing profile — but ONLY if draft hasn't already populated
+  // these fields (don't overwrite the user's in-progress edits).
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id || !draft.hydrated) return;
     (async () => {
       const [uRes, cpRes] = await Promise.all([
         supabase.from('users').select('*').eq('id', user.id).maybeSingle(),
         supabase.from('consumer_profiles').select('*').eq('user_id', user.id).maybeSingle(),
       ]);
-      if (uRes.data) {
-        setFullName(uRes.data.full_name ?? '');
-        setPhone(uRes.data.phone ?? '');
-      }
-      const cp = cpRes.data;
-      if (cp) {
-        setProfession(cp.profession ?? '');
-        setAddressLine(cp.address_line ?? '');
-        setCity(cp.city ?? '');
-        setDistrict(cp.district ?? '');
-        setState(cp.state ?? '');
-        setPincode(cp.pincode ?? '');
-        setIdType(cp.government_id_type ?? 'aadhaar');
-        setIdNumber(cp.government_id_number ?? '');
-        if (cp.government_id_url) setIdImage(cp.government_id_url);
-      }
+      setForm((f) => {
+        const u = uRes.data;
+        const cp = cpRes.data;
+        return {
+          ...f,
+          fullName: f.fullName || u?.full_name || '',
+          phone: f.phone || u?.phone || '',
+          profession: f.profession || cp?.profession || '',
+          addressLine: f.addressLine || cp?.address_line || '',
+          city: f.city || cp?.city || '',
+          district: f.district || cp?.district || '',
+          state: f.state || cp?.state || '',
+          pincode: f.pincode || cp?.pincode || '',
+          idType: f.idType || cp?.government_id_type || 'aadhaar',
+          idNumber: f.idNumber || cp?.government_id_number || '',
+          idImage: f.idImage || cp?.government_id_url || null,
+        };
+      });
     })();
-  }, [user?.id]);
+  }, [user?.id, draft.hydrated]);
 
   const pickIdImage = async () => {
     const res = await ImagePicker.launchImageLibraryAsync({
@@ -144,6 +185,7 @@ export default function ConsumerKYCScreen() {
       if (cpRes.error) throw cpRes.error;
 
       // Navigate immediately; refresh in background so user doesn't wait
+      void draft.clear();
       router.replace('/(consumer)/home');
       void refreshProfile();
     } catch (e: any) {
@@ -163,6 +205,15 @@ export default function ConsumerKYCScreen() {
         <Text className="text-gray-500 text-base mb-6">
           We need these details before you can pre-book any crop.
         </Text>
+
+        <DraftBanner
+          show={draft.resume}
+          savedAt={draft.savedAt}
+          onStartOver={() => {
+            draft.clear();
+            setForm(INITIAL_FORM);
+          }}
+        />
 
         <Section title="Personal">
           <Field label="Full Name *" value={fullName} onChangeText={setFullName} />
