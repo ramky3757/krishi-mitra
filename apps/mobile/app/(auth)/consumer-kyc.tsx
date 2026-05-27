@@ -9,7 +9,6 @@ import { useDraft } from '@/lib/draftStorage';
 import DraftBanner from '@/components/DraftBanner';
 import TermsCheckbox from '@/components/TermsCheckbox';
 import { TERMS_VERSION } from '@/lib/terms';
-import { sendWelcomeEmail } from '@/lib/sendWelcomeEmail';
 
 const ID_TYPES = [
   { value: 'aadhaar', label: 'Aadhaar' },
@@ -193,16 +192,6 @@ export default function ConsumerKYCScreen() {
 
       // Navigate immediately; refresh in background so user doesn't wait
       void draft.clear();
-
-      // Fire welcome email in background (don't block UX)
-      if (user?.email) {
-        void sendWelcomeEmail({
-          email: user.email,
-          name: fullName.trim() || 'there',
-          role: 'consumer',
-        });
-      }
-
       router.replace('/(consumer)/home');
       void refreshProfile();
     } catch (e: any) {
