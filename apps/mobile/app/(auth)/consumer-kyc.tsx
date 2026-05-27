@@ -3,6 +3,7 @@ import { View, Text, Pressable, ScrollView, TextInput, ActivityIndicator, Platfo
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { useAuthStore } from '@/stores/authStore';
+import PhoneField from '@/components/PhoneField';
 import { supabase } from '@/lib/supabase';
 
 const ID_TYPES = [
@@ -87,7 +88,7 @@ export default function ConsumerKYCScreen() {
 
   const isValid =
     fullName.trim() &&
-    phone.trim() &&
+    /^\+91[6-9]\d{9}$/.test(phone) &&
     addressLine.trim() &&
     city.trim() &&
     state.trim() &&
@@ -165,7 +166,7 @@ export default function ConsumerKYCScreen() {
 
         <Section title="Personal">
           <Field label="Full Name *" value={fullName} onChangeText={setFullName} />
-          <Field label="Mobile Number *" value={phone} onChangeText={setPhone} keyboardType="phone-pad" placeholder="+91 9876543210" />
+          <PhoneField label="Mobile Number" required value={phone} onChange={setPhone} />
           <Field label="Profession (optional)" value={profession} onChangeText={setProfession} placeholder="e.g. Software Engineer" />
         </Section>
 

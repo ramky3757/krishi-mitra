@@ -3,6 +3,7 @@ import { View, Text, Pressable, ScrollView, TextInput, ActivityIndicator } from 
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { router } from 'expo-router';
+import PhoneField from '@/components/PhoneField';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -171,7 +172,7 @@ export default function FarmerKYCScreen() {
 }
 
 function Step1({ data, onChange, onNext }: any) {
-  const isValid = data.fullName && data.phone && data.state && data.district;
+  const isValid = data.fullName && /^\+91[6-9]\d{9}$/.test(data.phone) && data.state && data.district;
   return (
     <View className="flex-1">
       <Text className="text-2xl font-bold text-gray-900 mb-1">Basic Details</Text>
@@ -179,7 +180,7 @@ function Step1({ data, onChange, onNext }: any) {
 
       <View className="gap-4">
         <LabeledInput label="Full Name *" placeholder="Your legal name" value={data.fullName} onChange={(v: string) => onChange((d: any) => ({ ...d, fullName: v }))} />
-        <LabeledInput label="Mobile Number *" placeholder="+91 9876543210" value={data.phone} onChange={(v: string) => onChange((d: any) => ({ ...d, phone: v }))} keyboardType="phone-pad" />
+        <PhoneField label="Mobile Number" required value={data.phone} onChange={(v: string) => onChange((d: any) => ({ ...d, phone: v }))} />
         <LabeledInput label="Farm Address" placeholder="Village / Town, District" value={data.farmAddress} onChange={(v: string) => onChange((d: any) => ({ ...d, farmAddress: v }))} />
         <LabeledInput label="State *" placeholder="e.g. Telangana" value={data.state} onChange={(v: string) => onChange((d: any) => ({ ...d, state: v }))} />
         <LabeledInput label="District *" placeholder="e.g. Nalgonda" value={data.district} onChange={(v: string) => onChange((d: any) => ({ ...d, district: v }))} />
