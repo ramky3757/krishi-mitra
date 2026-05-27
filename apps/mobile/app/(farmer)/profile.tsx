@@ -1,17 +1,16 @@
 import { useState } from 'react';
 import { View, Text, Pressable, ScrollView } from 'react-native';
 import { router } from 'expo-router';
-import { Button, Dialog, Portal } from 'react-native-paper';
 import { useAuthStore } from '@/stores/authStore';
 import { VERIFICATION_BADGES } from '@/constants';
+import SignOutDialog from '@/components/SignOutDialog';
 
 export default function FarmerProfileScreen() {
   const { user, farmerProfile, signOut } = useAuthStore();
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [signingOut, setSigningOut] = useState(false);
 
   const doSignOut = () => {
-    setConfirmOpen(false);
+    // Navigate FIRST so the screen unmounts (taking the dialog with it) — no animation lag
     router.replace('/(auth)/welcome');
     void signOut();
   };
@@ -91,20 +90,11 @@ export default function FarmerProfileScreen() {
       </View>
     </ScrollView>
 
-    <Portal>
-      <Dialog visible={confirmOpen} onDismiss={() => !signingOut && setConfirmOpen(false)}>
-        <Dialog.Title>Sign Out?</Dialog.Title>
-        <Dialog.Content>
-          <Text>You'll need to sign in again to manage your listings and orders.</Text>
-        </Dialog.Content>
-        <Dialog.Actions>
-          <Button onPress={() => setConfirmOpen(false)} disabled={signingOut}>Cancel</Button>
-          <Button onPress={doSignOut} loading={signingOut} disabled={signingOut} textColor="#b91c1c">
-            Sign Out
-          </Button>
-        </Dialog.Actions>
-      </Dialog>
-    </Portal>
+    <SignOutDialog
+      visible={confirmOpen}
+      onCancel={() => setConfirmOpen(false)}
+      onConfirm={doSignOut}
+    />
     </>
   );
 }
