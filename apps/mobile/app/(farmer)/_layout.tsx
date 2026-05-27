@@ -27,7 +27,7 @@ export default function FarmerLayout() {
       <Tabs.Screen name="orders" options={{ title: 'Orders', tabBarIcon: ({ focused }) => <TabIcon emoji="📦" focused={focused} /> }} />
       <Tabs.Screen name="profile" options={{ title: 'Profile', tabBarIcon: ({ focused }) => <TabIcon emoji="👤" focused={focused} /> }} />
       <Tabs.Screen name="create-listing" options={{ href: null }} />
-      <Tabs.Screen name="listing/[id]" options={{ href: null }} />
+      <Tabs.Screen name="my-crop/[id]" options={{ href: null }} />
       <Tabs.Screen name="order/[id]" options={{ href: null }} />
     </Tabs>
   );

@@ -23,7 +23,7 @@ export default function FarmerListingDetailScreen() {
   const loadListing = async () => {
     const { data } = await supabase
       .from('crop_listings')
-      .select('*, media:listing_media(*), progress_updates(*), bookings(*, consumer:consumer_profiles(*, user:users(*)))')
+      .select('*, media:listing_media(*), progress_updates(*), bookings(*, consumer:users!consumer_id(*, consumer_profile:consumer_profiles(*)))')
       .eq('id', id)
       .single();
     setListing(data);
@@ -182,7 +182,7 @@ export default function FarmerListingDetailScreen() {
                     <Text>🧑</Text>
                   </View>
                   <View className="flex-1">
-                    <Text className="font-semibold text-gray-800">{b.consumer?.user?.full_name ?? 'Consumer'}</Text>
+                    <Text className="font-semibold text-gray-800">{b.consumer?.full_name ?? b.consumer?.email ?? 'Consumer'}</Text>
                     <Text className="text-gray-400 text-xs">{formatWeight(b.qty_kg)} · {b.status}</Text>
                   </View>
                   <Text className="text-brand-700 font-semibold">{formatCurrency(b.advance_amount)}</Text>
