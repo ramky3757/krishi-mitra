@@ -130,9 +130,13 @@ export default function ConsumerKYCScreen() {
     }
   };
 
+  // Accept both '9876543210' and '+919876543210' — last 10 digits must be valid
+  const phoneDigits = (phone ?? '').replace(/\D/g, '').slice(-10);
+  const isPhoneValid = /^[6-9]\d{9}$/.test(phoneDigits);
+
   const isValid =
     fullName.trim() &&
-    /^\+91[6-9]\d{9}$/.test(phone) &&
+    isPhoneValid &&
     addressLine.trim() &&
     city.trim() &&
     state.trim() &&

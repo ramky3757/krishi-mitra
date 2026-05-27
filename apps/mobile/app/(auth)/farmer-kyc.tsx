@@ -198,7 +198,11 @@ export default function FarmerKYCScreen() {
 }
 
 function Step1({ data, onChange, onNext }: any) {
-  const isValid = data.fullName && /^\+91[6-9]\d{9}$/.test(data.phone) && data.state && data.district;
+  // Accept both old format ("9876543210") and new format ("+919876543210") —
+  // takes the last 10 digits and checks they form a valid Indian mobile.
+  const phoneDigits = (data.phone ?? '').replace(/\D/g, '').slice(-10);
+  const isPhoneValid = /^[6-9]\d{9}$/.test(phoneDigits);
+  const isValid = data.fullName && isPhoneValid && data.state && data.district;
   return (
     <View className="flex-1">
       <Text className="text-2xl font-bold text-gray-900 mb-1">Basic Details</Text>
