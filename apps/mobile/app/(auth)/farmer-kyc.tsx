@@ -10,6 +10,7 @@ import { useDraft } from '@/lib/draftStorage';
 import DraftBanner from '@/components/DraftBanner';
 import TermsCheckbox from '@/components/TermsCheckbox';
 import { TERMS_VERSION } from '@/lib/terms';
+import { sendWelcomeEmail } from '@/lib/sendWelcomeEmail';
 
 interface KYCData {
   fullName: string;
@@ -145,6 +146,15 @@ export default function FarmerKYCScreen() {
 
       // Wipe the draft now that submission succeeded
       void draft.clear();
+
+      // Fire welcome email in background (don't block on it)
+      if (user?.email) {
+        void sendWelcomeEmail({
+          email: user.email,
+          name: data.fullName.trim() || 'Farmer',
+          role: 'farmer',
+        });
+      }
 
       // Navigate immediately — don't await profile refresh
       router.replace('/(farmer)/dashboard');
