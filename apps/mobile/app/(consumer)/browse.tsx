@@ -138,17 +138,18 @@ export default function BrowseScreen() {
       )}
 
       {/* Quick filter chips with counts */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        className="bg-white border-b border-gray-100"
-        contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 10, gap: 8 }}
-      >
-        <QuickFilter active={quickFilter === 'all'} onPress={() => setQuickFilter('all')} label="All" count={counts.all} />
-        <QuickFilter active={quickFilter === 'ready'} onPress={() => setQuickFilter('ready')} label="✅ Ready Now" count={counts.ready} />
-        <QuickFilter active={quickFilter === 'soon'} onPress={() => setQuickFilter('soon')} label="⏳ Harvest <30d" count={counts.soon} />
-        <QuickFilter active={quickFilter === 'organic'} onPress={() => setQuickFilter('organic')} label="🌿 Organic" count={counts.organic} />
-      </ScrollView>
+      <View className="bg-white border-b border-gray-100">
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 10, gap: 8, alignItems: 'center' }}
+        >
+          <QuickFilter active={quickFilter === 'all'} onPress={() => setQuickFilter('all')} label="All" count={counts.all} />
+          <QuickFilter active={quickFilter === 'ready'} onPress={() => setQuickFilter('ready')} label="✅ Ready Now" count={counts.ready} />
+          <QuickFilter active={quickFilter === 'soon'} onPress={() => setQuickFilter('soon')} label="⏳ Harvest <30d" count={counts.soon} />
+          <QuickFilter active={quickFilter === 'organic'} onPress={() => setQuickFilter('organic')} label="🌿 Organic" count={counts.organic} />
+        </ScrollView>
+      </View>
 
       {/* Results */}
       <FlatList
@@ -219,12 +220,16 @@ function QuickFilter({ active, onPress, label, count }: { active: boolean; onPre
   return (
     <Pressable
       onPress={onPress}
-      className={`flex-row items-center gap-1.5 rounded-full px-3.5 py-2 border ${
+      // Explicit height + alignSelf prevents the chip from being stretched
+      // vertically when the parent's flex layout has unused space (which
+      // turns rounded-full into an oversized capsule shape).
+      style={{ alignSelf: 'center', height: 36 }}
+      className={`flex-row items-center gap-1.5 rounded-full px-3.5 border ${
         active ? 'bg-brand-700 border-brand-700' : 'bg-white border-gray-200'
       }`}
     >
       <Text className={`text-sm font-semibold ${active ? 'text-white' : 'text-gray-700'}`}>{label}</Text>
-      <View className={`rounded-full px-1.5 py-0 ${active ? 'bg-white/25' : 'bg-gray-100'}`}>
+      <View className={`rounded-full px-1.5 py-0.5 ${active ? 'bg-white/25' : 'bg-gray-100'}`}>
         <Text className={`text-[10px] font-bold ${active ? 'text-white' : 'text-gray-600'}`}>{count}</Text>
       </View>
     </Pressable>
