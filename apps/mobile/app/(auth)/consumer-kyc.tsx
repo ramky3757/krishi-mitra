@@ -9,6 +9,7 @@ import { useDraft } from '@/lib/draftStorage';
 import DraftBanner from '@/components/DraftBanner';
 import TermsCheckbox from '@/components/TermsCheckbox';
 import { TERMS_VERSION } from '@/lib/terms';
+import GovernmentIDField, { isGovernmentIDValid, type IDType } from '@/components/GovernmentIDField';
 
 const ID_TYPES = [
   { value: 'aadhaar', label: 'Aadhaar' },
@@ -142,7 +143,7 @@ export default function ConsumerKYCScreen() {
     state.trim() &&
     pincode.trim() &&
     idType &&
-    idNumber.trim() &&
+    isGovernmentIDValid(idType as IDType, idNumber) &&
     termsAccepted;
 
   const handleSubmit = async () => {
@@ -185,7 +186,8 @@ export default function ConsumerKYCScreen() {
           state: state.trim(),
           pincode: pincode.trim(),
           government_id_type: idType,
-          government_id_number: idNumber.trim(),
+          // Strip formatting spaces/dashes — store the raw identifier
+          government_id_number: idNumber.replace(/[\s-]/g, '').trim(),
           government_id_url: idUrl,
           kyc_status: 'pending',
           kyc_submitted_at: new Date().toISOString(),
@@ -252,7 +254,12 @@ export default function ConsumerKYCScreen() {
               </Pressable>
             ))}
           </View>
-          <Field label="ID Number *" value={idNumber} onChangeText={setIdNumber} placeholder="Enter as on document" autoCapitalize="characters" />
+          <GovernmentIDField
+            idType={idType as IDType}
+            value={idNumber}
+            onChange={setIdNumber}
+            required
+          />
 
           <Text className="text-gray-700 font-semibold mb-2 mt-2">ID Document Photo (optional)</Text>
           <Pressable
