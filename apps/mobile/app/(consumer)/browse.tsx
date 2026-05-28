@@ -173,23 +173,39 @@ export default function BrowseScreen() {
         ListFooterComponent={isLoading ? <ActivityIndicator color="#1a6b3c" className="py-6" /> : null}
         ListEmptyComponent={
           isLoading ? (
-            <View className="items-center py-16">
+            <View className="items-center py-12">
               <ActivityIndicator color="#1a6b3c" size="large" />
               <Text className="text-gray-400 text-sm mt-3">Loading crops…</Text>
             </View>
           ) : (
-            <View className="items-center py-16">
-              <Text className="text-5xl mb-3">🌾</Text>
-              <Text className="text-gray-600 font-semibold">No crops found</Text>
-              <Text className="text-gray-400 text-sm mt-1 text-center">
-                {Object.keys(filters).length > 0
-                  ? 'Try adjusting your filters'
-                  : 'Farmers are preparing their crops.\nCheck back soon!'}
+            <View className="items-center py-8 px-4">
+              <View className="w-16 h-16 rounded-full bg-gray-100 items-center justify-center mb-3">
+                <Text className="text-3xl">🔍</Text>
+              </View>
+              <Text className="text-gray-700 font-semibold text-base">
+                {quickFilter !== 'all' || Object.keys(filters).length > 0
+                  ? 'No matches with this filter'
+                  : 'No crops listed yet'}
               </Text>
-              {Object.keys(filters).length > 0 && (
-                <Pressable onPress={resetFilters} className="mt-4 bg-brand-100 rounded-xl px-5 py-2">
-                  <Text className="text-brand-700 font-semibold">Clear Filters</Text>
-                </Pressable>
+              <Text className="text-gray-400 text-sm mt-1 text-center max-w-xs">
+                {quickFilter !== 'all' || Object.keys(filters).length > 0
+                  ? 'Try a different category or clear the active filter.'
+                  : 'Farmers are preparing their crops. Check back soon!'}
+              </Text>
+              {(quickFilter !== 'all' || Object.keys(filters).length > 0) && (
+                <View className="flex-row gap-2 mt-4">
+                  <Pressable
+                    onPress={() => setQuickFilter('all')}
+                    className="bg-brand-700 rounded-xl px-4 py-2"
+                  >
+                    <Text className="text-white font-semibold text-sm">Show all crops</Text>
+                  </Pressable>
+                  {Object.keys(filters).length > 0 && (
+                    <Pressable onPress={resetFilters} className="border border-gray-300 rounded-xl px-4 py-2">
+                      <Text className="text-gray-700 font-semibold text-sm">Clear filters</Text>
+                    </Pressable>
+                  )}
+                </View>
               )}
             </View>
           )

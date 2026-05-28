@@ -22,6 +22,14 @@ interface KYCData {
   landDocUri: string;
   geoLat: number | null;
   geoLng: number | null;
+  // Trust-building fields shown to consumers on listings
+  yearsOfExperience: string;
+  landSizeAcres: string;
+  generations: string;
+  bio: string;
+  cropVarieties: string;          // comma-separated input → parsed to array
+  certifications: string[];       // multi-select chips
+  languages: string[];            // multi-select chips
 }
 
 export default function FarmerKYCScreen() {
@@ -44,6 +52,13 @@ export default function FarmerKYCScreen() {
     landDocUri: '',
     geoLat: null,
     geoLng: null,
+    yearsOfExperience: '',
+    landSizeAcres: '',
+    generations: '',
+    bio: '',
+    cropVarieties: '',
+    certifications: [],
+    languages: [],
   };
   const [data, setData, draft] = useDraft<KYCData>(draftKey, initialData);
 
@@ -138,6 +153,16 @@ export default function FarmerKYCScreen() {
           district: data.district,
           village: data.village || null,
           verification_badges: [],
+          // Trust profile
+          years_of_experience: data.yearsOfExperience ? parseInt(data.yearsOfExperience, 10) : null,
+          land_size_acres: data.landSizeAcres ? parseFloat(data.landSizeAcres) : null,
+          family_lineage_generations: data.generations ? parseInt(data.generations, 10) : null,
+          bio: data.bio.trim() || null,
+          crop_varieties: data.cropVarieties
+            ? data.cropVarieties.split(',').map((s: string) => s.trim()).filter(Boolean)
+            : null,
+          farming_certifications: data.certifications.length ? data.certifications : null,
+          languages: data.languages.length ? data.languages : null,
         }),
       ]);
       if (userRes.error) throw userRes.error;
@@ -160,7 +185,7 @@ export default function FarmerKYCScreen() {
       <View className="flex-1 px-6 pt-16 pb-8">
         {/* Progress */}
         <View className="flex-row gap-2 mb-8">
-          {[1, 2, 3].map((s) => (
+          {[1, 2, 3, 4].map((s) => (
             <View
               key={s}
               className={`flex-1 h-1.5 rounded-full ${s <= step ? 'bg-brand-600' : 'bg-gray-200'}`}
@@ -181,12 +206,13 @@ export default function FarmerKYCScreen() {
 
         {step === 1 && <Step1 data={data} onChange={setData} onNext={() => setStep(2)} />}
         {step === 2 && <Step2 data={data} pickDocument={pickDocument} captureLocation={captureLocation} onBack={() => setStep(1)} onNext={() => setStep(3)} />}
-        {step === 3 && (
-          <Step3
+        {step === 3 && <Step3About data={data} onChange={setData} onBack={() => setStep(2)} onNext={() => setStep(4)} />}
+        {step === 4 && (
+          <Step4Review
             data={data}
             isLoading={isLoading}
             error={submitError}
-            onBack={() => setStep(2)}
+            onBack={() => setStep(3)}
             onSubmit={handleSubmit}
             termsAccepted={termsAccepted}
             setTermsAccepted={setTermsAccepted}
@@ -276,7 +302,140 @@ function Step2({ data, pickDocument, captureLocation, onBack, onNext }: any) {
   );
 }
 
-function Step3({ data, isLoading, error, onBack, onSubmit, termsAccepted, setTermsAccepted }: any) {
+const CERT_OPTIONS = [
+  { value: 'organic', label: '🌿 Organic' },
+  { value: 'natural', label: '🌱 Natural farming' },
+  { value: 'pgs_india', label: '🏛️ PGS India' },
+  { value: 'fair_trade', label: '🤝 Fair Trade' },
+  { value: 'msme', label: '🏭 MSME' },
+];
+
+const LANG_OPTIONS = [
+  { value: 'hindi', label: 'हिन्दी' },
+  { value: 'telugu', label: 'తెలుగు' },
+  { value: 'tamil', label: 'தமிழ்' },
+  { value: 'kannada', label: 'ಕನ್ನಡ' },
+  { value: 'marathi', label: 'मराठी' },
+  { value: 'malayalam', label: 'മലയാളം' },
+  { value: 'gujarati', label: 'ગુજરાતી' },
+  { value: 'punjabi', label: 'ਪੰਜਾਬੀ' },
+  { value: 'bengali', label: 'বাংলা' },
+  { value: 'english', label: 'English' },
+];
+
+function Step3About({ data, onChange, onBack, onNext }: any) {
+  const toggle = (key: 'certifications' | 'languages', value: string) => {
+    onChange((d: any) => {
+      const list: string[] = d[key] ?? [];
+      return { ...d, [key]: list.includes(value) ? list.filter(v => v !== value) : [...list, value] };
+    });
+  };
+
+  return (
+    <View className="flex-1">
+      <Text className="text-2xl font-bold text-gray-900 mb-1">About You</Text>
+      <Text className="text-gray-500 mb-2">
+        Share your story so consumers know who's growing their food. This builds trust and boosts your bookings.
+      </Text>
+      <View className="bg-brand-50 border border-brand-200 rounded-2xl px-4 py-3 mb-6">
+        <Text className="text-brand-700 text-xs">
+          💡 Farmers with a complete profile get on average <Text className="font-bold">2.5× more bookings</Text>.
+        </Text>
+      </View>
+
+      <View className="gap-4">
+        <View className="flex-row gap-3">
+          <View className="flex-1">
+            <LabeledInput label="Years of experience" placeholder="e.g. 15" value={data.yearsOfExperience} onChange={(v: string) => onChange((d: any) => ({ ...d, yearsOfExperience: v.replace(/\D/g, '').slice(0, 2) }))} keyboardType="number-pad" />
+          </View>
+          <View className="flex-1">
+            <LabeledInput label="Land size (acres)" placeholder="e.g. 5" value={data.landSizeAcres} onChange={(v: string) => onChange((d: any) => ({ ...d, landSizeAcres: v }))} keyboardType="numeric" />
+          </View>
+        </View>
+
+        <LabeledInput
+          label="Generations of farmers in family (optional)"
+          placeholder="e.g. 3 (means 3rd generation)"
+          value={data.generations}
+          onChange={(v: string) => onChange((d: any) => ({ ...d, generations: v.replace(/\D/g, '').slice(0, 2) }))}
+          keyboardType="number-pad"
+        />
+
+        <View>
+          <Text className="text-gray-700 font-semibold mb-1.5">Crops you grow</Text>
+          <Text className="text-gray-400 text-xs mb-2">Comma-separated, e.g. Sona Masuri rice, Tomato, Brinjal</Text>
+          <TextInput
+            className="border-2 border-gray-200 rounded-2xl px-4 py-3.5 text-base text-gray-900"
+            placeholder="Rice, Wheat, Vegetables, ..."
+            value={data.cropVarieties}
+            onChangeText={(v) => onChange((d: any) => ({ ...d, cropVarieties: v }))}
+          />
+        </View>
+
+        <View>
+          <Text className="text-gray-700 font-semibold mb-2">Certifications (optional)</Text>
+          <View className="flex-row flex-wrap gap-2">
+            {CERT_OPTIONS.map(c => {
+              const sel = (data.certifications ?? []).includes(c.value);
+              return (
+                <Pressable
+                  key={c.value}
+                  onPress={() => toggle('certifications', c.value)}
+                  className={`px-3 py-2 rounded-full border-2 ${sel ? 'bg-brand-50 border-brand-600' : 'border-gray-200 bg-white'}`}
+                >
+                  <Text className={sel ? 'text-brand-700 font-semibold text-sm' : 'text-gray-600 text-sm'}>{c.label}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+
+        <View>
+          <Text className="text-gray-700 font-semibold mb-2">Languages you speak</Text>
+          <View className="flex-row flex-wrap gap-2">
+            {LANG_OPTIONS.map(l => {
+              const sel = (data.languages ?? []).includes(l.value);
+              return (
+                <Pressable
+                  key={l.value}
+                  onPress={() => toggle('languages', l.value)}
+                  className={`px-3 py-2 rounded-full border-2 ${sel ? 'bg-brand-50 border-brand-600' : 'border-gray-200 bg-white'}`}
+                >
+                  <Text className={sel ? 'text-brand-700 font-semibold text-sm' : 'text-gray-600 text-sm'}>{l.label}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+
+        <View>
+          <Text className="text-gray-700 font-semibold mb-1.5">About you (optional)</Text>
+          <Text className="text-gray-400 text-xs mb-2">A line or two consumers will read. Your story, your values, anything personal.</Text>
+          <TextInput
+            className="border-2 border-gray-200 rounded-2xl px-4 py-3 text-base text-gray-900 h-24"
+            placeholder="e.g. Third-generation rice farmer from Nalgonda. Pesticide-free for 8 years. My grandfather taught me to read the soil."
+            multiline
+            value={data.bio}
+            onChangeText={(v) => onChange((d: any) => ({ ...d, bio: v.slice(0, 300) }))}
+          />
+          <Text className="text-gray-400 text-[10px] mt-1 text-right">{(data.bio?.length ?? 0)}/300</Text>
+        </View>
+      </View>
+
+      <View className="flex-1" />
+      <View className="flex-row gap-3 mt-8">
+        <Pressable onPress={onBack} className="flex-1 border-2 border-gray-200 rounded-2xl py-4 items-center">
+          <Text className="font-semibold text-gray-700">← Back</Text>
+        </Pressable>
+        <Pressable onPress={onNext} className="flex-2 flex-1 bg-brand-700 rounded-2xl py-4 items-center">
+          <Text className="text-white font-bold">Next →</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+function Step4Review({ data, isLoading, error, onBack, onSubmit, termsAccepted, setTermsAccepted }: any) {
   return (
     <View className="flex-1">
       <Text className="text-2xl font-bold text-gray-900 mb-1">Review & Submit</Text>

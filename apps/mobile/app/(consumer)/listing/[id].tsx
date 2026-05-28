@@ -40,7 +40,7 @@ export default function ListingDetailScreen() {
 
   return (
     <View className="flex-1 bg-white">
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 220 }}>
         {/* Hero */}
         <View className="relative">
           <View className="h-72 bg-brand-100 items-center justify-center">
@@ -202,33 +202,69 @@ function DetailsTab({ listing, method }: any) {
   );
 }
 
+const CERT_LABELS: Record<string, string> = {
+  organic: '🌿 Organic',
+  natural: '🌱 Natural farming',
+  pgs_india: '🏛️ PGS India',
+  fair_trade: '🤝 Fair Trade',
+  msme: '🏭 MSME',
+};
+const LANG_LABELS: Record<string, string> = {
+  hindi: 'हिन्दी', telugu: 'తెలుగు', tamil: 'தமிழ்', kannada: 'ಕನ್ನಡ',
+  marathi: 'मराठी', malayalam: 'മലയാളം', gujarati: 'ગુજરાતી',
+  punjabi: 'ਪੰਜਾਬੀ', bengali: 'বাংলা', english: 'English',
+};
+
+function ordinal(n: number): string {
+  const s = ['th', 'st', 'nd', 'rd'];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+
 function FarmerTab({ farmer }: any) {
   if (!farmer) return <Text className="text-gray-500">Farmer info not available</Text>;
-  const profile = farmer.farmer_profile;
+  const profile = farmer.farmer_profile ?? {};
+  const photo = profile.profile_photo_url;
+  const years = profile.years_of_experience;
+  const generations = profile.family_lineage_generations;
+  const land = profile.land_size_acres;
+  const varieties: string[] = profile.crop_varieties ?? [];
+  const certs: string[] = profile.farming_certifications ?? [];
+  const langs: string[] = profile.languages ?? [];
+
   return (
-    <View className="gap-4">
-      {/* Profile */}
+    <View className="gap-5">
+      {/* Profile header */}
       <View className="flex-row items-center gap-3">
-        <View className="w-16 h-16 rounded-full bg-brand-200 items-center justify-center">
-          <Text className="text-3xl">🧑‍🌾</Text>
-        </View>
+        {photo ? (
+          <Image source={{ uri: photo }} className="w-16 h-16 rounded-full" />
+        ) : (
+          <View className="w-16 h-16 rounded-full bg-brand-200 items-center justify-center">
+            <Text className="text-3xl">🧑‍🌾</Text>
+          </View>
+        )}
         <View className="flex-1">
-          <Text className="font-bold text-gray-900 text-lg">{farmer.full_name}</Text>
+          <Text className="font-bold text-gray-900 text-lg">{farmer.full_name ?? 'Verified Farmer'}</Text>
           <Text className="text-gray-500 text-sm">📍 {profile?.district}, {profile?.state}</Text>
-          {profile?.avg_rating > 0 && (
-            <View className="flex-row items-center gap-1 mt-1">
-              <Text className="text-yellow-500">⭐</Text>
-              <Text className="text-gray-700 font-semibold">{profile.avg_rating.toFixed(1)}</Text>
-              <Text className="text-gray-400 text-sm">({profile.completed_orders} orders)</Text>
-            </View>
+          {generations >= 2 && (
+            <Text className="text-brand-700 text-xs font-semibold mt-0.5">{ordinal(generations)} generation farmer</Text>
           )}
         </View>
       </View>
 
-      {/* Badges */}
+      {/* Quick stats grid */}
+      {(years || land || varieties.length > 0) && (
+        <View className="flex-row gap-2">
+          {years > 0 && <StatTile icon="🗓️" value={`${years}+ yrs`} label="Experience" />}
+          {land > 0 && <StatTile icon="🌾" value={`${land} ac`} label="Farm size" />}
+          {varieties.length > 0 && <StatTile icon="🌿" value={String(varieties.length)} label="Crop variety" plural={varieties.length > 1 ? 'Crop varieties' : undefined} />}
+        </View>
+      )}
+
+      {/* Verification badges */}
       {profile?.verification_badges?.length > 0 && (
         <View>
-          <Text className="font-semibold text-gray-800 mb-2">Verification</Text>
+          <Text className="font-semibold text-gray-800 mb-2">Verified by Krishi Mitra</Text>
           <View className="flex-row flex-wrap gap-2">
             {profile.verification_badges.map((badge: string) => {
               const b = VERIFICATION_BADGES.find((vb) => vb.key === badge);
@@ -243,12 +279,73 @@ function FarmerTab({ farmer }: any) {
         </View>
       )}
 
+      {/* About / bio */}
       {profile?.bio && (
-        <View>
-          <Text className="font-semibold text-gray-800 mb-1.5">About the Farmer</Text>
-          <Text className="text-gray-600 leading-6">{profile.bio}</Text>
+        <View className="bg-brand-50 border border-brand-200 rounded-2xl p-4">
+          <Text className="font-bold text-brand-800 mb-1.5">🗣️ From the farmer</Text>
+          <Text className="text-brand-700 leading-6 italic">"{profile.bio}"</Text>
         </View>
       )}
+
+      {/* Crops grown */}
+      {varieties.length > 0 && (
+        <View>
+          <Text className="font-semibold text-gray-800 mb-2">Crops grown</Text>
+          <View className="flex-row flex-wrap gap-2">
+            {varieties.map((c) => (
+              <View key={c} className="bg-gray-100 rounded-full px-3 py-1">
+                <Text className="text-gray-700 text-xs font-medium">{c}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
+
+      {/* Certifications */}
+      {certs.length > 0 && (
+        <View>
+          <Text className="font-semibold text-gray-800 mb-2">Certifications</Text>
+          <View className="flex-row flex-wrap gap-2">
+            {certs.map((c) => (
+              <View key={c} className="bg-amber-50 border border-amber-200 rounded-full px-3 py-1">
+                <Text className="text-amber-700 text-xs font-semibold">{CERT_LABELS[c] ?? c}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
+
+      {/* Languages */}
+      {langs.length > 0 && (
+        <View>
+          <Text className="font-semibold text-gray-800 mb-2">Speaks</Text>
+          <View className="flex-row flex-wrap gap-2">
+            {langs.map((l) => (
+              <View key={l} className="bg-blue-50 border border-blue-200 rounded-full px-3 py-1">
+                <Text className="text-blue-700 text-xs font-semibold">{LANG_LABELS[l] ?? l}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
+
+      {(!years && !land && varieties.length === 0 && !profile?.bio) && (
+        <View className="bg-gray-50 rounded-2xl p-4">
+          <Text className="text-gray-500 text-sm">
+            This farmer hasn't added their full story yet. The basic verification is still complete (ID, land records, GPS).
+          </Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
+function StatTile({ icon, value, label, plural }: { icon: string; value: string; label: string; plural?: string }) {
+  return (
+    <View className="flex-1 bg-white border border-gray-100 rounded-2xl py-3 items-center">
+      <Text className="text-xl">{icon}</Text>
+      <Text className="font-bold text-gray-900 text-sm mt-1">{value}</Text>
+      <Text className="text-gray-400 text-[10px]">{plural ?? label}</Text>
     </View>
   );
 }
