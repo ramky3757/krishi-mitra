@@ -5,6 +5,7 @@ import { useListingsStore } from '@/stores/listingsStore';
 import { formatCurrency, formatWeight, formatDate, formatRelativeDate } from '@/lib/formatters';
 import { CROP_CATEGORIES, FARMING_METHODS, CROP_MILESTONES, VERIFICATION_BADGES } from '@/constants';
 import { CropMilestone } from '@/types';
+import { STAGE_LABELS, advancePctForStage, getPlatformConfig, type PlatformConfig, type CropStage } from '@/lib/pricing';
 
 const { width } = Dimensions.get('window');
 
@@ -12,9 +13,11 @@ export default function ListingDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { selectedListing, fetchListingById, isLoading } = useListingsStore();
   const [activeTab, setActiveTab] = useState<'details' | 'farmer' | 'progress'>('details');
+  const [config, setConfig] = useState<PlatformConfig | null>(null);
 
   useEffect(() => {
     fetchListingById(id);
+    getPlatformConfig().then(setConfig);
   }, [id]);
 
   if (isLoading || !selectedListing) {
@@ -29,7 +32,11 @@ export default function ListingDetailScreen() {
   const category = CROP_CATEGORIES.find((c) => c.value === listing.crop_category);
   const method = FARMING_METHODS.find((m) => m.value === listing.farming_method);
   const remainingQty = listing.available_qty_kg - (listing.booked_qty_kg ?? 0);
-  const advancePerKg = listing.price_per_kg_advance;
+  const cropStage = ((listing as any).crop_stage ?? 'pre_sowing') as CropStage;
+  const stageInfo = STAGE_LABELS[cropStage];
+  const advancePct = config ? advancePctForStage(cropStage, config) : 30;
+  const advancePerKg = Math.ceil((listing.price_per_kg_final * advancePct) / 100);
+  const remainingPerKg = listing.price_per_kg_final - advancePerKg;
 
   return (
     <View className="flex-1 bg-white">
@@ -130,14 +137,23 @@ export default function ListingDetailScreen() {
 
       {/* Bottom CTA */}
       <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-5 py-4 pb-8">
+        <View className="flex-row items-center justify-between mb-1">
+          <View className="flex-row items-center gap-1.5">
+            <Text className="text-base">{stageInfo.emoji}</Text>
+            <Text className="text-gray-600 text-xs font-semibold">{stageInfo.label}</Text>
+          </View>
+          <View className="bg-brand-50 rounded-full px-2.5 py-0.5">
+            <Text className="text-brand-700 text-[11px] font-bold">{advancePct}% advance</Text>
+          </View>
+        </View>
         <View className="flex-row items-center justify-between mb-3">
           <View>
-            <Text className="text-gray-500 text-xs">Advance payment (25–30%)</Text>
+            <Text className="text-gray-500 text-xs">Pay now</Text>
             <Text className="text-brand-700 font-bold text-lg">{formatCurrency(advancePerKg)}/kg</Text>
           </View>
           <View className="items-end">
-            <Text className="text-gray-500 text-xs">Final on delivery</Text>
-            <Text className="text-gray-700 font-semibold">{formatCurrency(listing.price_per_kg_final - advancePerKg)}/kg</Text>
+            <Text className="text-gray-500 text-xs">{cropStage === 'ready_now' ? 'Already paid' : 'On delivery'}</Text>
+            <Text className="text-gray-700 font-semibold">{cropStage === 'ready_now' ? '—' : `${formatCurrency(remainingPerKg)}/kg`}</Text>
           </View>
         </View>
         {remainingQty > 0 ? (

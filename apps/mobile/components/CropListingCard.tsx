@@ -148,7 +148,15 @@ export function CropListingCard({ listing, onPress, compact = false }: Props) {
         {!compact && (
           <View className="bg-brand-700 rounded-xl py-2.5 items-center">
             <Text className="text-white font-semibold text-sm">
-              Pre-book from {formatCurrency(Math.ceil(listing.price_per_kg_final * 0.2))}/kg →
+              {(() => {
+                const stagePct: Record<string, number> = {
+                  pre_sowing: 20, sowed: 30, growing: 40, pre_harvest: 60, ready_now: 100,
+                };
+                const pct = stagePct[stage] ?? 30;
+                const perKg = Math.ceil((listing.price_per_kg_final * pct) / 100);
+                if (pct === 100) return `Buy now ${formatCurrency(listing.price_per_kg_final)}/kg →`;
+                return `Pre-book with ${pct}% advance · ${formatCurrency(perKg)}/kg →`;
+              })()}
             </Text>
           </View>
         )}

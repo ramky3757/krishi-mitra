@@ -39,7 +39,7 @@ const SLIDES = [
     image: 'https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=1200&auto=format&fit=crop&q=80',
     eyebrow: 'Pre-book the harvest',
     title: 'Own your share',
-    body: 'Reserve your quantity months before harvest. Pay just 25–30% upfront to lock it in.',
+    body: 'Reserve months before harvest with just 20% advance. Closer to harvest? Pay more, get it sooner.',
   },
   {
     // Farm field crops growing — progress tracking

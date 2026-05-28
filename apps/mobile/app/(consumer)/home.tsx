@@ -137,7 +137,7 @@ export default function HomeScreen() {
           <TrustPoint icon="✅" text="Only verified farmers with confirmed land records" />
           <TrustPoint icon="📸" text="Real-time crop progress photos from the farm" />
           <TrustPoint icon="🚜" text="Visit the farm up to 2 times before harvest" />
-          <TrustPoint icon="💰" text="Pay just 25–30% advance to book your share" />
+          <TrustPoint icon="💰" text="Book early with just 20% advance — pay more closer to harvest" />
         </View>
       </View>
     </ScrollView>
