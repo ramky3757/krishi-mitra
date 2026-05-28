@@ -24,12 +24,16 @@ export default function PhoneField({
   error?: string;
   helper?: string;
 }) {
-  // Pull just the last 10 digits for display
-  const digitsOnly = (value || '').replace(/\D/g, '');
-  const last10 = digitsOnly.slice(-10);
+  // Extract the local 10-digit portion from whatever's stored.
+  // CRITICAL: explicitly strip the leading '+91' first so that the country
+  // code's '91' digits don't get fed back into the input and mistaken for
+  // user-typed digits (which previously caused the input to balloon to
+  // '919191...' after just a few keystrokes).
+  const stripped = (value || '').replace(/^\+91/, '').replace(/\D/g, '');
+  const last10 = stripped.slice(0, 10);
 
   const handleChange = (text: string) => {
-    // Strip non-digits and cap at 10
+    // User-typed text is the LOCAL portion only; strip non-digits and cap at 10
     const cleaned = text.replace(/\D/g, '').slice(0, 10);
     if (!cleaned) {
       onChange('');
