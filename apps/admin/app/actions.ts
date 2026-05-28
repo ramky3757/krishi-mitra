@@ -106,13 +106,91 @@ export async function createUser(formData: FormData) {
   redirect('/users');
 }
 
+/**
+ * Cascade-delete every listing belonging to the farmer plus all dependent
+ * records (bookings, payments, media, progress updates, payouts).
+ * Use this when you want to wipe a farmer's catalog but keep their account.
+ */
+export async function deleteFarmerListings(userId: string) {
+  // 1. Get all listing IDs for this farmer
+  const { data: listings, error: listingsErr } = await supabase
+    .from('crop_listings')
+    .select('id')
+    .eq('farmer_id', userId);
+  if (listingsErr) throw new Error(listingsErr.message);
+
+  const listingIds = (listings ?? []).map((l) => l.id);
+  if (listingIds.length === 0) return { deletedListings: 0 };
+
+  // 2. Get all booking IDs for those listings
+  const { data: bookings } = await supabase
+    .from('bookings')
+    .select('id')
+    .in('listing_id', listingIds);
+  const bookingIds = (bookings ?? []).map((b) => b.id);
+
+  // 3. Delete child rows in dependency order (only if there are bookings)
+  if (bookingIds.length > 0) {
+    await supabase.from('payments').delete().in('booking_id', bookingIds);
+    await supabase.from('farm_visits').delete().in('booking_id', bookingIds);
+    await supabase.from('bookings').delete().in('id', bookingIds);
+  }
+
+  // 4. Listing-level child rows
+  await supabase.from('listing_media').delete().in('listing_id', listingIds);
+  await supabase.from('progress_updates').delete().in('listing_id', listingIds);
+
+  // 5. Payouts directly to this farmer
+  await supabase.from('payouts').delete().eq('farmer_id', userId);
+
+  // 6. Finally the listings themselves
+  const { error: listDelErr } = await supabase
+    .from('crop_listings')
+    .delete()
+    .in('id', listingIds);
+  if (listDelErr) throw new Error(listDelErr.message);
+
+  return { deletedListings: listingIds.length };
+}
+
+/**
+ * Full removal: listings (via deleteFarmerListings) + profile + auth row.
+ * After this the user can sign up fresh with the same email.
+ */
 export async function deleteUser(userId: string) {
-  // Remove auth user (cascades clean up sessions/identities)
+  // First check role — if farmer, cascade-delete their listings + child rows
+  const { data: target } = await supabase
+    .from('users')
+    .select('role')
+    .eq('id', userId)
+    .maybeSingle();
+
+  if (target?.role === 'farmer') {
+    await deleteFarmerListings(userId);
+    // Farmer profile
+    await supabase.from('farmer_profiles').delete().eq('user_id', userId);
+  } else if (target?.role === 'consumer') {
+    // Cancel consumer's own bookings (their advance is forfeit per policy on
+    // mass-delete; admin should refund manually if needed before deleting)
+    const { data: cBookings } = await supabase
+      .from('bookings')
+      .select('id')
+      .eq('consumer_id', userId);
+    const cBookingIds = (cBookings ?? []).map((b) => b.id);
+    if (cBookingIds.length > 0) {
+      await supabase.from('payments').delete().in('booking_id', cBookingIds);
+      await supabase.from('farm_visits').delete().in('booking_id', cBookingIds);
+      await supabase.from('bookings').delete().in('id', cBookingIds);
+    }
+    await supabase.from('consumer_profiles').delete().eq('user_id', userId);
+  }
+
+  // Auth user (also cascades sessions/identities in Supabase)
   const { error: authErr } = await supabase.auth.admin.deleteUser(userId);
   if (authErr && !authErr.message.toLowerCase().includes('not found')) {
     throw new Error(authErr.message);
   }
-  // Remove profile row (in case auth user was already gone)
+  // Public profile row
   const { error } = await supabase.from('users').delete().eq('id', userId);
   if (error) throw new Error(error.message);
 }
