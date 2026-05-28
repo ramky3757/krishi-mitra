@@ -156,17 +156,18 @@ export default function ListingDetailScreen() {
             <Text className="text-gray-700 font-semibold">{cropStage === 'ready_now' ? '—' : `${formatCurrency(remainingPerKg)}/kg`}</Text>
           </View>
         </View>
-        {remainingQty > 0 ? (
+        {((listing as any).status === 'fully_booked' || remainingQty <= 0) ? (
+          <View className="bg-gray-100 border border-gray-200 rounded-2xl py-4 items-center">
+            <Text className="text-gray-700 font-bold text-base">📦 Fully Booked</Text>
+            <Text className="text-gray-400 text-xs mt-0.5">All quantity reserved by other consumers</Text>
+          </View>
+        ) : (
           <Pressable
             onPress={() => router.push({ pathname: '/(consumer)/checkout', params: { listingId: listing.id } })}
             className="bg-brand-700 rounded-2xl py-4 items-center"
           >
             <Text className="text-white font-bold text-base">Pre-Book Now 🌾</Text>
           </Pressable>
-        ) : (
-          <View className="bg-gray-200 rounded-2xl py-4 items-center">
-            <Text className="text-gray-500 font-bold text-base">Fully Booked</Text>
-          </View>
         )}
       </View>
     </View>

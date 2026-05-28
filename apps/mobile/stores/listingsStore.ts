@@ -43,7 +43,7 @@ export const useListingsStore = create<ListingsState>((set, get) => ({
         farmer:users!farmer_id(*, farmer_profile:farmer_profiles(*)),
         media:listing_media(*)
       `)
-      .eq('status', 'active')
+      .in('status', ['active', 'fully_booked'])
       .order('created_at', { ascending: false })
       .range(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE - 1);
 
@@ -75,7 +75,7 @@ export const useListingsStore = create<ListingsState>((set, get) => ({
     const { data } = await supabase
       .from('crop_listings')
       .select(`*, farmer:users!farmer_id(*, farmer_profile:farmer_profiles(*)), media:listing_media(*)`)
-      .eq('status', 'active')
+      .in('status', ['active', 'fully_booked'])
       .order('created_at', { ascending: false })
       .limit(6);
 

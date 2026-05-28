@@ -215,3 +215,48 @@ export async function updateUserRole(userId: string, role: 'farmer' | 'consumer'
   const { error } = await supabase.from('users').update({ role }).eq('id', userId);
   if (error) throw new Error(error.message);
 }
+
+/**
+ * Delete a single crop listing and all dependent rows (bookings, payments,
+ * media, progress updates, farm visits, payouts).
+ */
+export async function deleteListing(listingId: string) {
+  // 1. Bookings on this listing
+  const { data: bookings } = await supabase
+    .from('bookings')
+    .select('id')
+    .eq('listing_id', listingId);
+  const bookingIds = (bookings ?? []).map((b) => b.id);
+
+  if (bookingIds.length > 0) {
+    await supabase.from('payments').delete().in('booking_id', bookingIds);
+    await supabase.from('farm_visits').delete().in('booking_id', bookingIds);
+    await supabase.from('bookings').delete().in('id', bookingIds);
+  }
+
+  // 2. Listing-level child rows
+  await supabase.from('listing_media').delete().eq('listing_id', listingId);
+  await supabase.from('progress_updates').delete().eq('listing_id', listingId);
+
+  // 3. Finally the listing
+  const { error } = await supabase.from('crop_listings').delete().eq('id', listingId);
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * Change a listing's status. Used by admin to:
+ *   active        → fully_booked  (no more bookings accepted, still visible to consumers)
+ *   active        → archived      (end of season — hidden from consumers)
+ *   archived      → active        (next season — back in the catalog)
+ *   any           → completed     (manually mark done)
+ */
+export async function setListingStatus(
+  listingId: string,
+  status: 'active' | 'fully_booked' | 'archived' | 'completed' | 'cancelled'
+) {
+  const { error } = await supabase
+    .from('crop_listings')
+    .update({ status })
+    .eq('id', listingId);
+  if (error) throw new Error(error.message);
+}

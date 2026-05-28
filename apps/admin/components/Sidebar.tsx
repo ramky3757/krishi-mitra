@@ -8,7 +8,8 @@ import { signOut } from '@/app/actions';
 const NAV_ITEMS = [
   { href: '/dashboard', icon: '📊', label: 'Dashboard' },
   { href: '/kyc', icon: '🪪', label: 'KYC Review' },
-  { href: '/listings', icon: '🌾', label: 'Listings' },
+  { href: '/listings', icon: '⏳', label: 'Approvals' },
+  { href: '/manage-listings', icon: '🌾', label: 'All Listings' },
   { href: '/bookings', icon: '📦', label: 'Bookings' },
   { href: '/users', icon: '👥', label: 'Users' },
   { href: '/disputes', icon: '⚖️', label: 'Disputes' },
